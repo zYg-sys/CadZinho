@@ -2,7 +2,7 @@
 
 #ifndef __EMSCRIPTEN__
 
-#include "SDL_net.h"
+#include "SDL2/SDL_net.h"
 
 /* this function was designed to integrate with:
 ZeroBrane Studio (Lightweight IDE for your Lua needs) by Paul Kulchenko
@@ -957,6 +957,7 @@ int gui_script_prepare (gui_obj *gui, struct script_obj *script) {
 		{"get_all", script_get_all},
 		{"get_text_data", script_get_text_data},
 		{"get_drwg_path", script_get_drwg_path},
+    {"get_drwg_handle_seed", script_get_drwg_handle_seed},
 		
 		{"edit_attr", script_edit_attr},
 		{"add_ext", script_add_ext},

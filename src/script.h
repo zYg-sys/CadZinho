@@ -50,6 +50,11 @@ struct script_thread{
 	int wait_gui_resume;
 };
 
+struct script_do_point {
+  int hist_pos;
+  struct do_entry * current;
+};
+
 struct ent_lua { /* DXF entity object, in Lua userdata */
 	dxf_node *curr_ent;
 	dxf_node *orig_ent;
@@ -94,6 +99,7 @@ int script_get_blk_ents (lua_State *L);
 int script_get_all (lua_State *L);
 int script_get_text_data (lua_State *L);
 int script_get_drwg_path (lua_State *L);
+int script_get_drwg_handle_seed (lua_State *L);
 
 int script_edit_attr (lua_State *L);
 int script_add_ext (lua_State *L);

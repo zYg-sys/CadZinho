@@ -1857,6 +1857,46 @@ int script_get_drwg_path (lua_State *L) {
 	return 2;
 }
 
+/* get the current drawing handle seed */
+/* given parameters:
+	- none
+returns:
+	- next handle as number (integer), nil if fails
+*/
+int script_get_drwg_handle_seed (lua_State *L) {
+	/* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as  "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	if (gui->drawing == NULL){
+    lua_pushnil(L);  /* fail */
+    return 1;
+  }
+  if ((gui->drawing->ents == NULL) || (gui->drawing->main_struct == NULL)){
+    lua_pushnil(L);  /* fail */
+    return 1;
+  }
+  if (gui->drawing->hand_seed == NULL){
+    lua_pushnil(L);  /* fail */
+    return 1;
+  }
+  /* get current handle seed*/
+  long int handle = 0;
+    
+  /* get the last handle value and convert to integer */
+  handle = strtol(strpool_cstr2( &value_pool, gui->drawing->hand_seed->value.str), NULL, 16);
+  
+	lua_pushinteger(L, handle); /* return value */
+	return 1;
+}
+
 /* ========= entity modification functions =========== */
 
 /* edit data (tag, value and hidden flag)  of  a ATTRIB in a INSERT entity */

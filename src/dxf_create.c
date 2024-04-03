@@ -231,6 +231,7 @@ int do_undo(struct do_list *list){
 				curr_item = curr_item->prev;
 			}
 			list->current = entry->prev; /* change current in the list to prev*/
+      list->count--;
 		}}
 	}
 	return ret;
@@ -249,6 +250,7 @@ int do_redo(struct do_list *list){
 				curr_item = curr_item->next;
 			}
 			list->current = entry; /* change current in the list to next*/
+      list->count++;
 		}}
 	}
 	return ret;
