@@ -201,4 +201,9 @@ int script_sqlite_rows(lua_State *L);
 int script_sqlite_open(lua_State *L);
 int script_sqlite_close(lua_State *L);
 
+int script_get_do_point (lua_State *L);
+int script_do_sync (lua_State *L);
+int script_do_changes (lua_State *L);
+
+
 #endif

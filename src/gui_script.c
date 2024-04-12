@@ -958,6 +958,7 @@ int gui_script_prepare (gui_obj *gui, struct script_obj *script) {
 		{"get_text_data", script_get_text_data},
 		{"get_drwg_path", script_get_drwg_path},
     {"get_drwg_handle_seed", script_get_drwg_handle_seed},
+    {"get_do_point", script_get_do_point},
 		
 		{"edit_attr", script_edit_attr},
 		{"add_ext", script_add_ext},
@@ -1053,6 +1054,17 @@ int gui_script_prepare (gui_obj *gui, struct script_obj *script) {
 	lua_pushvalue(T, -1); /*  */
 	lua_setfield(T, -2, "__index");
 	luaL_setfuncs(T, pdf_meths, 0);
+	lua_pop( T, 1);
+  
+  static const struct luaL_Reg do_meths[] = {
+		{"get_changes", script_do_changes},
+		{"sync", script_do_sync},
+		{NULL, NULL}
+	};
+	luaL_newmetatable(T, "cz_do_obj");
+	lua_pushvalue(T, -1); /*  */
+	lua_setfield(T, -2, "__index");
+	luaL_setfuncs(T, do_meths, 0);
 	lua_pop( T, 1);
 	
 	static const struct luaL_Reg miniz_meths[] = {

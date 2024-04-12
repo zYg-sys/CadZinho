@@ -7971,3 +7971,203 @@ int script_last_blk (lua_State *L) {
 	lua_pushinteger(L, last);
 	return 1;
 }
+
+
+/* ====================== do point =================== */
+
+/* point in DO list to verify changes in drawing */
+/* given parameters:
+	- none
+returns:
+	- a cz_do object (use methods to sync and check changes), or nil if fail
+*/
+int script_get_do_point (lua_State *L) {
+	/* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	struct script_do_point * do_point;
+	
+	/* create a userdata object */
+	do_point = (struct script_do_point *) lua_newuserdata(L, sizeof(struct script_do_point)); 
+	luaL_getmetatable(L, "cz_do_obj");
+	lua_setmetatable(L, -2);
+	
+	/* init the structure */
+	if(!do_point){
+		lua_pushnil(L); /* return fail */
+		return 1;
+	}
+	do_point->hist_pos = gui->list_do.count;
+  do_point->current = gui->list_do.current;
+	
+	return 1;
+}
+
+/* sync the do_point with gui hist point */
+/* given parameters:
+	- a do_point object (this function is called as method inside object)
+returns:
+	- none
+*/
+int script_do_sync (lua_State *L) {
+  /* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	struct script_do_point * do_point;
+	
+	/* verify passed arguments */
+	int n = lua_gettop(L);    /* number of arguments */
+	if (n < 1){
+		lua_pushliteral(L, "sync: invalid number of arguments");
+		lua_error(L);
+	}
+	if (!( do_point =  luaL_checkudata(L, 1, "cz_do_obj") )) { /* the object is a Lua userdata type*/
+		lua_pushliteral(L, "sync: incorrect argument type");
+		lua_error(L);
+	}
+	
+	/* update structure */
+	do_point->hist_pos = gui->list_do.count;
+  do_point->current = gui->list_do.current;
+	
+	return 0;
+}
+
+/* get changes from passed do_point until the gui hist point */
+/* given parameters:
+	- a do_point object (this function is called as method inside object)
+returns:
+	- a table with changes
+*/
+int script_do_changes (lua_State *L) {
+  /* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	struct script_do_point * do_point;
+	
+	/* verify passed arguments */
+	int n = lua_gettop(L);    /* number of arguments */
+	if (n < 1){
+		lua_pushliteral(L, "sync: invalid number of arguments");
+		lua_error(L);
+	}
+	if (!( do_point =  luaL_checkudata(L, 1, "cz_do_obj") )) { /* the object is a Lua userdata type*/
+		lua_pushliteral(L, "sync: incorrect argument type");
+		lua_error(L);
+	}
+	
+	/* update structure */
+	n = gui->list_do.count - do_point->hist_pos;
+  int i = 1;
+  lua_newtable(L); /* main returned table */
+  struct ent_lua *ent;
+  
+  //int do_undo(struct do_list *list){
+	while (n < 0){ /* get previous mods */
+		struct do_entry *entry = do_point->current;
+		if (entry){ if (entry->prev){
+			/* sweep list in reverse order */
+			struct do_item *curr_item = entry->current;
+			while (curr_item){
+        
+        lua_newtable(L); /* table to store old and new objects */
+        lua_pushstring(L, "new");
+        if (curr_item->old_obj){
+          ent = (struct ent_lua *) lua_newuserdatauv(L, sizeof(struct ent_lua), 0);  /* create a userdata object */
+          ent->curr_ent = NULL;
+          ent->orig_ent = curr_item->old_obj;
+          ent->drawing = gui->drawing;
+          luaL_getmetatable(L, "cz_ent_obj");
+          lua_setmetatable(L, -2);
+        } else lua_pushnil(L);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "old");
+        if (curr_item->new_obj){
+          ent = (struct ent_lua *) lua_newuserdatauv(L, sizeof(struct ent_lua), 0);  /* create a userdata object */
+          ent->curr_ent = NULL;
+          ent->orig_ent = curr_item->new_obj;
+          ent->drawing = gui->drawing;
+          luaL_getmetatable(L, "cz_ent_obj");
+          lua_setmetatable(L, -2);
+        } else lua_pushnil(L);
+        lua_rawset(L, -3);
+        
+				/* store old-new table in main returned table */
+				lua_rawseti(L, -2, i);  /* set table at key `i' */
+				i++;
+        
+				curr_item = curr_item->prev;
+			}
+      n++;
+		}}
+	}
+
+//int do_redo(struct do_list *list){
+	while (n > 0){ /* get next mods */
+		struct do_entry *entry = do_point->current;
+		if (entry){ if (entry->next){
+			entry = entry->next;
+			struct do_item *curr_item = entry->list;
+			while (curr_item){
+				lua_newtable(L); /* table to store old and new objects */
+        lua_pushstring(L, "old");
+        if (curr_item->old_obj){
+          ent = (struct ent_lua *) lua_newuserdatauv(L, sizeof(struct ent_lua), 0);  /* create a userdata object */
+          ent->curr_ent = NULL;
+          ent->orig_ent = curr_item->old_obj;
+          ent->drawing = gui->drawing;
+          luaL_getmetatable(L, "cz_ent_obj");
+          lua_setmetatable(L, -2);
+        } else lua_pushnil(L);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "new");
+        if (curr_item->new_obj){
+          ent = (struct ent_lua *) lua_newuserdatauv(L, sizeof(struct ent_lua), 0);  /* create a userdata object */
+          ent->curr_ent = NULL;
+          ent->orig_ent = curr_item->new_obj;
+          ent->drawing = gui->drawing;
+          luaL_getmetatable(L, "cz_ent_obj");
+          lua_setmetatable(L, -2);
+        } else lua_pushnil(L);
+        lua_rawset(L, -3);
+        
+				/* store old-new table in main returned table */
+				lua_rawseti(L, -2, i);  /* set table at key `i' */
+				i++;
+        
+				curr_item = curr_item->next;
+			}
+      n--;
+		}}
+	}
+  
+ 
+	return 1;
+}
