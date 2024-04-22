@@ -431,6 +431,74 @@ int main(int argc, char** argv){
 		
 	}
 	
+  
+	double curr_time = time_to_julian(time(NULL)); /* get current time */
+  
+  /* store creation time in header variable */
+  dxf_node *start = NULL, *end = NULL, *part = NULL;
+  if(dxf_find_head_var(gui->drawing->head, "$TDUCREATE", &start, &end)){
+    /* variable exists */
+    part = dxf_find_attr_i2(start, end, 40, 0);
+    if (part != NULL){
+      part->value.d_data = curr_time;
+    }
+  }
+  else{
+    dxf_attr_append(gui->drawing->head, 9, "$TDUCREATE", DWG_LIFE);
+    dxf_attr_append(gui->drawing->head, 40, &curr_time, DWG_LIFE);
+  }
+
+  /* store update time in header variable */
+  start = NULL; end = NULL; part = NULL;
+  if(dxf_find_head_var(gui->drawing->head, "$TDUUPDATE", &start, &end)){
+    /* variable exists */
+    part = dxf_find_attr_i2(start, end, 40, 0);
+    if (part != NULL){
+      part->value.d_data = curr_time;
+    }
+  }
+  else{
+    dxf_attr_append(gui->drawing->head, 9, "$TDUUPDATE", DWG_LIFE);
+    dxf_attr_append(gui->drawing->head, 40, &curr_time, DWG_LIFE);
+  }
+  
+  /* generate a UUID for drawing */
+  char uuid_str[40];
+  int uuid[4];
+  uuid_generate(uuid);
+  uuid4_str(uuid_str, uuid, "{xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx}");
+  
+  /* store creation UUID in header variable */
+  start = NULL; end = NULL; part = NULL;
+  if(dxf_find_head_var(gui->drawing->head, "$FINGERPRINTGUID", &start, &end)){
+    /* variable exists */
+    part = dxf_find_attr_i2(start, end, 2, 0);
+    if (part != NULL){
+      part->value.str = strpool_inject( &name_pool, uuid_str, 38);
+    }
+  }
+  else{
+    dxf_attr_append(gui->drawing->head, 9, "$FINGERPRINTGUID", DWG_LIFE);
+    dxf_attr_append(gui->drawing->head, 2, uuid_str, DWG_LIFE);
+  }
+  
+  /* store update UUID in header variable */
+  start = NULL; end = NULL; part = NULL;
+  if(dxf_find_head_var(gui->drawing->head, "$VERSIONGUID", &start, &end)){
+    /* variable exists */
+    part = dxf_find_attr_i2(start, end, 2, 0);
+    if (part != NULL){
+      part->value.str = strpool_inject( &name_pool, uuid_str, 38);
+    }
+  }
+  else{
+    dxf_attr_append(gui->drawing->head, 9, "$VERSIONGUID", DWG_LIFE);
+    dxf_attr_append(gui->drawing->head, 2, uuid_str, DWG_LIFE);
+  }
+  
+  strncpy (gui->list_do.current->uuid, uuid_str, ACT_CHARS - 1);
+  gui->list_do.current->time = curr_time;
+  
   gui->layer_idx = dxf_lay_idx (gui->drawing,
     strpool_inject( &name_pool, "0", 1));
   gui->ltypes_idx = dxf_ltype_idx (gui->drawing,

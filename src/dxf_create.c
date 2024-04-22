@@ -192,6 +192,12 @@ int do_add_entry(struct do_list *list, char *text){
 				strncpy(entry->text, text, ACT_CHARS);
 				entry->text[ACT_CHARS - 1] = 0; /*terminate string*/
 			}
+      
+      int uuid[4];
+      uuid_generate(uuid);
+      uuid4_str(entry->uuid, uuid, "{xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx}");
+      
+      entry->time = time_to_julian(time(NULL));
 			ret = 1;
 		}
 	}
@@ -211,7 +217,9 @@ int init_do_list(struct do_list *list){
 			entry->list = NULL;
 			entry->current = NULL;
 			
-			entry->text[0] = 0; /*initialize string*/
+			entry->text[0] = 0; /* no string */
+      entry->uuid[0] = 0; /* no uuid */
+      entry->time = 0.0; /* no time */
 			ret =1;
 		}
 	}

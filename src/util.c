@@ -1032,3 +1032,60 @@ int ray_plane(double ray_o[3], /*ray orign point*/
 	
 	return 1;
 }
+
+double time_to_julian(time_t t){
+  return 2440587.5 + (double) t / 86400.0;
+}
+
+time_t julian_to_time(double jd){
+  return (time_t) (jd - 2440587.5) * 86400;
+}
+
+unsigned int hash (unsigned int value){
+	
+	static unsigned int multiplier = 0x43b0d7e5u;
+
+  value ^= multiplier;
+  multiplier *= 0x931e8875u;
+  value *= multiplier;
+  value ^= value >> 16;
+  return value;
+}
+
+void uuid_generate(unsigned int number[4]) {
+  static float count = 0; /* internal counter */
+	time_t t;
+	time(&t); /* get current time */
+	int nr = rand(); /* random number */
+  
+  number[0] = hash (t);
+  number[1] = hash ((unsigned int) count); 
+  number[2] = hash (nr);
+  number[3] = hash (nr + (unsigned int) count);
+  count += 1.2345;
+}
+
+void uuid4_str(char *dst, unsigned int *num, const char *templ) {
+  if (!templ) templ = "{xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx}";
+  static const char *chars = "0123456789ABCDEF";
+  unsigned char *b = (unsigned char *) num;
+  const char *p;
+  int i, n;
+  
+  /* build string */
+  p = templ;
+  i = 0;
+  while (*p) {
+    if (i < 32){
+      n = b[i >> 1];
+      n = (i & 1) ? (n >> 4) : (n & 0xf);
+    }
+    switch (*p) {
+      case 'x'  : *dst = chars[n];              i++;  break;
+      case 'y'  : *dst = chars[(n & 0x3) + 8];  i++;  break;
+      default   : *dst = *p;
+    }
+    dst++, p++;
+  }
+  *dst = '\0';
+}

@@ -110,4 +110,14 @@ int ray_plane(double ray_o[3], double ray_dir[3],
 	
 int invert_4matrix(float *m, float *m_inv);
 
+double time_to_julian(time_t t);
+
+time_t julian_to_time(double jd);
+
+unsigned int hash (unsigned int value);
+
+void uuid_generate(unsigned int number[4]);
+
+void uuid4_str(char *dst, unsigned int *num, const char *templ);
+
 #endif

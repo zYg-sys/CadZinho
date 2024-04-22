@@ -1,6 +1,6 @@
 #ifndef _DXF_CREATE_LIB
 #define _DXF_CREATE_LIB
-#define ACT_CHARS 32
+#define ACT_CHARS 40
 #define DO_PAGES 1000
 #define DO_PAGE 10000
 
@@ -23,6 +23,8 @@ struct do_entry {
 	struct do_entry *prev;
 	struct do_entry *next;
 	char text[ACT_CHARS];
+  char uuid[ACT_CHARS];
+  double time;
 	struct do_item *list;
 	struct do_item *current;
 };
