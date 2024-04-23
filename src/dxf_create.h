@@ -4,6 +4,8 @@
 #define DO_PAGES 1000
 #define DO_PAGE 10000
 
+#define DO_HIST_SZ 10000
+
 #define MAX_FIT_PTS 1000
 
 #include "dxf.h"
@@ -25,12 +27,19 @@ struct do_entry {
 	char text[ACT_CHARS];
   char uuid[ACT_CHARS];
   double time;
+  unsigned int seq;
 	struct do_item *list;
 	struct do_item *current;
 };
 
+struct do_hist {
+  struct do_entry *entry;
+  int undo;
+};
+
 struct do_list {
 	int count;
+  struct do_hist hist[DO_HIST_SZ];
 	struct do_entry *list;
 	struct do_entry *current;
 };

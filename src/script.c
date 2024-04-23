@@ -8075,30 +8075,44 @@ int script_do_changes (lua_State *L) {
 	/* verify passed arguments */
 	int n = lua_gettop(L);    /* number of arguments */
 	if (n < 1){
-		lua_pushliteral(L, "sync: invalid number of arguments");
+		lua_pushliteral(L, "changes: invalid number of arguments");
 		lua_error(L);
 	}
 	if (!( do_point =  luaL_checkudata(L, 1, "cz_do_obj") )) { /* the object is a Lua userdata type*/
-		lua_pushliteral(L, "sync: incorrect argument type");
+		lua_pushliteral(L, "changes: incorrect argument type");
 		lua_error(L);
 	}
 	
-	/* update structure */
 	n = gui->list_do.count - do_point->hist_pos;
+  
+  if (n < 0 || do_point->hist_pos >= DO_HIST_SZ) { /* */
+		lua_pushliteral(L, "changes: object out of date");
+		lua_error(L);
+	}
+  
   int i = 1;
   lua_newtable(L); /* main returned table */
   struct ent_lua *ent;
+  if (n == 0) return 1; /* no changes */
   
-  //int do_undo(struct do_list *list){
-	while (n < 0){ /* get previous mods */
-		struct do_entry *entry = do_point->current;
-		if (entry){ if (entry->prev){
-			/* sweep list in reverse order */
+  if (do_point->hist_pos){
+    if (gui->list_do.hist[do_point->hist_pos-1].entry != do_point->current) { /* */
+      lua_pushliteral(L, "changes: object out of date");
+      lua_error(L);
+    }
+  }
+  
+  for (n = do_point->hist_pos; n < gui->list_do.count; n++){
+    struct do_entry *entry = gui->list_do.hist[n].entry;
+    int undo = gui->list_do.hist[n].undo;
+    if (entry){
+        /* sweep list in reverse order */
 			struct do_item *curr_item = entry->current;
 			while (curr_item){
         
         lua_newtable(L); /* table to store old and new objects */
-        lua_pushstring(L, "new");
+        if (undo) lua_pushstring(L, "new");
+        else lua_pushstring(L, "old");
         if (curr_item->old_obj){
           ent = (struct ent_lua *) lua_newuserdatauv(L, sizeof(struct ent_lua), 0);  /* create a userdata object */
           ent->curr_ent = NULL;
@@ -8108,7 +8122,8 @@ int script_do_changes (lua_State *L) {
           lua_setmetatable(L, -2);
         } else lua_pushnil(L);
         lua_rawset(L, -3);
-        lua_pushstring(L, "old");
+        if (undo) lua_pushstring(L, "old");
+        else lua_pushstring(L, "new");
         if (curr_item->new_obj){
           ent = (struct ent_lua *) lua_newuserdatauv(L, sizeof(struct ent_lua), 0);  /* create a userdata object */
           ent->curr_ent = NULL;
@@ -8125,49 +8140,9 @@ int script_do_changes (lua_State *L) {
         
 				curr_item = curr_item->prev;
 			}
-      n++;
-		}}
-	}
+    }
+  }
 
-//int do_redo(struct do_list *list){
-	while (n > 0){ /* get next mods */
-		struct do_entry *entry = do_point->current;
-		if (entry){ if (entry->next){
-			entry = entry->next;
-			struct do_item *curr_item = entry->list;
-			while (curr_item){
-				lua_newtable(L); /* table to store old and new objects */
-        lua_pushstring(L, "old");
-        if (curr_item->old_obj){
-          ent = (struct ent_lua *) lua_newuserdatauv(L, sizeof(struct ent_lua), 0);  /* create a userdata object */
-          ent->curr_ent = NULL;
-          ent->orig_ent = curr_item->old_obj;
-          ent->drawing = gui->drawing;
-          luaL_getmetatable(L, "cz_ent_obj");
-          lua_setmetatable(L, -2);
-        } else lua_pushnil(L);
-        lua_rawset(L, -3);
-        lua_pushstring(L, "new");
-        if (curr_item->new_obj){
-          ent = (struct ent_lua *) lua_newuserdatauv(L, sizeof(struct ent_lua), 0);  /* create a userdata object */
-          ent->curr_ent = NULL;
-          ent->orig_ent = curr_item->new_obj;
-          ent->drawing = gui->drawing;
-          luaL_getmetatable(L, "cz_ent_obj");
-          lua_setmetatable(L, -2);
-        } else lua_pushnil(L);
-        lua_rawset(L, -3);
-        
-				/* store old-new table in main returned table */
-				lua_rawseti(L, -2, i);  /* set table at key `i' */
-				i++;
-        
-				curr_item = curr_item->next;
-			}
-      n--;
-		}}
-	}
-  
  
 	return 1;
 }

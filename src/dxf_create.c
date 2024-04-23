@@ -179,6 +179,13 @@ int do_add_entry(struct do_list *list, char *text){
 	if (list != NULL){
 		struct do_entry *entry = do_mem_pool(ADD_DO_ENTRY);
 		if ((entry) && (list->current) && (list->list)){
+      entry->seq = list->count;
+      
+      if (list->count < DO_HIST_SZ){
+        list->hist[list->count].entry = entry;
+        list->hist[list->count].undo = 0;
+      }
+      
 			list->count++;
 			list->current->next = entry;
 			entry->prev = list->current;
@@ -212,10 +219,13 @@ int init_do_list(struct do_list *list){
 			list->count = 0;
 			list->list = entry;
 			list->current = entry;
+      memset(list->hist, 0, DO_HIST_SZ * sizeof(struct do_hist));
+      
 			entry->prev = NULL;
 			entry->next = NULL;
 			entry->list = NULL;
 			entry->current = NULL;
+      entry->seq = 0;
 			
 			entry->text[0] = 0; /* no string */
       entry->uuid[0] = 0; /* no uuid */
@@ -239,7 +249,12 @@ int do_undo(struct do_list *list){
 				curr_item = curr_item->prev;
 			}
 			list->current = entry->prev; /* change current in the list to prev*/
-      list->count--;
+      
+      if (list->count < DO_HIST_SZ){
+        list->hist[list->count].entry = entry;
+        list->hist[list->count].undo = 1;
+      }
+      list->count++;
 		}}
 	}
 	return ret;
@@ -258,6 +273,10 @@ int do_redo(struct do_list *list){
 				curr_item = curr_item->next;
 			}
 			list->current = entry; /* change current in the list to next*/
+      if (list->count < DO_HIST_SZ){
+        list->hist[list->count].entry = entry;
+        list->hist[list->count].undo = 0;
+      }
       list->count++;
 		}}
 	}
