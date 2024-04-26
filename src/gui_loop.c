@@ -638,6 +638,24 @@ int gui_main_loop (gui_obj *gui) {
       gui->file_size = 0;
       gui->low_proc = 1;
       
+      dxf_node *start = NULL, *end = NULL, *part = NULL;
+      if(dxf_find_head_var(gui->drawing->head, "$VERSIONGUID", &start, &end)){
+        /* variable exists */
+        part = dxf_find_attr_i2(start, end, 2, 0);
+        if (part != NULL){
+          strncpy (gui->list_do.current->uuid, 
+            strpool_cstr2( &name_pool, part->value.str), ACT_CHARS - 1);
+        }
+      }
+      start = NULL; end = NULL; part = NULL;
+      if(dxf_find_head_var(gui->drawing->head, "$TDUUPDATE", &start, &end)){
+        /* variable exists */
+        part = dxf_find_attr_i2(start, end, 40, 0);
+        if (part != NULL){
+          gui->list_do.current->time = part->value.d_data;
+        }
+      }
+      
       dxf_ents_parse(gui->drawing);				
       gui->action = VIEW_ZOOM_EXT;
       gui->layer_idx = dxf_lay_idx (gui->drawing,
@@ -836,7 +854,15 @@ int gui_main_loop (gui_obj *gui) {
         do_mem_pool(ZERO_DO_ENTRY);
         init_do_list(&gui->list_do);
         gui->save_pt = gui->list_do.current;
-
+        
+        gui->list_do.current->time = time_to_julian(time(NULL)); /* get current time */
+        /* generate a UUID for point */
+        char uuid_str[40];
+        int uuid[4];
+        uuid_generate(uuid);
+        uuid4_str(uuid_str, uuid, "{xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx}");
+        strncpy (gui->list_do.current->uuid, uuid_str, ACT_CHARS - 1);
+        
         strncpy (gui->dwg_dir, get_dir(gui->curr_path) , PATH_MAX_CHARS);
         strncpy (gui->dwg_file, get_filename(gui->curr_path) , DXF_MAX_CHARS);
         

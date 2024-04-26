@@ -1058,6 +1058,7 @@ int gui_script_prepare (gui_obj *gui, struct script_obj *script) {
   
   static const struct luaL_Reg do_meths[] = {
 		{"get_changes", script_do_changes},
+    {"get_data", script_do_get_data},
 		{"sync", script_do_sync},
 		{NULL, NULL}
 	};

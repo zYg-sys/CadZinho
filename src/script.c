@@ -4,6 +4,28 @@
 #include "gui_script.h"
 #include "i_svg_media.h"
 
+
+void * udata_check(lua_State *L, int idx, const char *name){
+  
+  if (lua_getfield(L, LUA_REGISTRYINDEX, name) != LUA_TTABLE){
+    lua_pop(L, 1);
+    return NULL;
+  }
+  const void *meta1 = lua_topointer(L, -1);
+  lua_pop(L, 1);
+  
+  
+  if (!lua_getmetatable (L, idx)) return NULL;
+  const void *meta2 = lua_topointer(L, -1);
+  lua_pop(L, 1);
+  
+  if (meta1 == meta2){
+    return lua_touserdata(L, idx);
+  }
+  return NULL;
+}
+
+
 /* for debug purposes - print a Lua variable in given buffer string (idx is its position on Lua stack)*/
 static int print_lua_var(char * value, lua_State * L, int idx){
 	int type = lua_type(L, idx); /*get  Lua type*/
@@ -15,7 +37,7 @@ static int print_lua_var(char * value, lua_State * L, int idx){
 		}
 		case LUA_TNUMBER: {
 		/* LUA_NUMBER may be double or integer */
-			snprintf(value, DXF_MAX_CHARS - 1, "n: %.9g", lua_tonumber(L, idx));
+			snprintf(value, DXF_MAX_CHARS - 1, "n: %.15g", lua_tonumber(L, idx));
 			break;
 		}
 		case LUA_TTABLE: {
@@ -174,7 +196,7 @@ int debug_print (lua_State *L) {
 			}
 			case LUA_TNUMBER: {
 			/* LUA_NUMBER may be double or integer */
-				snprintf(msg, DXF_MAX_CHARS - 1, "%.9g", lua_tonumber(L, i));
+				snprintf(msg, DXF_MAX_CHARS - 1, "%.20g", lua_tonumber(L, i));
         print_internal (gui, msg);
 				break;
 			}
@@ -361,7 +383,7 @@ int script_ent_write (lua_State *L) {
 	struct ent_lua *ent_obj;
 	
 	/* verify passed arguments */
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "write: incorrect argument type");
 		lua_error(L);
 	}
@@ -450,7 +472,7 @@ int script_get_ent_typ (lua_State *L) {
 	struct ent_lua *ent_obj;
 	
 	/* verify passed arguments */
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_ent_typ: incorrect argument type");
 		lua_error(L);
 	}
@@ -493,7 +515,7 @@ int script_get_circle_data (lua_State *L) {
 	struct ent_lua *ent_obj;
 	
 	/* verify passed arguments */
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_circle_data: incorrect argument type");
 		lua_error(L);
 	}
@@ -607,7 +629,7 @@ int script_get_blk_name (lua_State *L) {
 	struct ent_lua *ent_obj;
 	
 	/* verify passed arguments */
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_blk_name: incorrect argument type");
 		lua_error(L);
 	}
@@ -654,7 +676,7 @@ int script_get_ins_data (lua_State *L) {
 	struct ent_lua *ent_obj;
 	
 	/* verify passed arguments */
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_ins_data: incorrect argument type");
 		lua_error(L);
 	}
@@ -768,7 +790,7 @@ int script_count_attrib (lua_State *L) {
 	struct ent_lua *ent_obj;
 	
 	/* verify passed arguments */
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "count_attrib: incorrect argument type");
 		lua_error(L);
 	}
@@ -830,7 +852,7 @@ int script_get_attrib_i (lua_State *L) {
 	}
 	struct ent_lua *ent_obj;
 	
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_attrib_i: incorrect argument type");
 		lua_error(L);
 	}
@@ -917,7 +939,7 @@ int script_get_attribs (lua_State *L) {
 	}
 	struct ent_lua *ent_obj;
 	
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_attribs: incorrect argument type");
 		lua_error(L);
 	}
@@ -1001,7 +1023,7 @@ int script_get_points (lua_State *L) {
 	struct ent_lua *ent_obj;
 	
 	/* verify passed arguments */
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "count_attrib: incorrect argument type");
 		lua_error(L);
 	}
@@ -1360,7 +1382,7 @@ int script_get_bound (lua_State *L) {
 	
 	struct ent_lua *ent_obj;
 	
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_bound: incorrect argument type");
 		lua_error(L);
 	}
@@ -1455,7 +1477,7 @@ int script_get_ext (lua_State *L) {
 		lua_pushliteral(L, "get_ext: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_ext: incorrect argument type");
 		lua_error(L);
 	}
@@ -1690,7 +1712,7 @@ int script_get_text_data (lua_State *L) {
 	struct ent_lua *ent_obj;
 	
 	/* verify passed arguments */
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "get_text_data: incorrect argument type");
 		lua_error(L);
 	}
@@ -1929,7 +1951,7 @@ int script_edit_attr (lua_State *L) {
 	}
 	struct ent_lua *ent_obj;
 	
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "edit_attr: incorrect argument type");
 		lua_error(L);
 	}
@@ -2045,7 +2067,7 @@ int script_add_ext (lua_State *L) {
 		lua_pushliteral(L, "add_ext: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "add_ext: incorrect argument type");
 		lua_error(L);
 	}
@@ -2187,7 +2209,7 @@ int script_edit_ext_i (lua_State *L) {
 		lua_pushliteral(L, "edit_ext_i: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "edit_ext_i: incorrect argument type");
 		lua_error(L);
 	}
@@ -2317,7 +2339,7 @@ int script_del_ext_i (lua_State *L) {
 		lua_pushliteral(L, "del_ext_i: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "del_ext_i: incorrect argument type");
 		lua_error(L);
 	}
@@ -2429,7 +2451,7 @@ int script_del_ext_all (lua_State *L) {
 		lua_pushliteral(L, "edit_ext_all: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "del_ext_all: incorrect argument type");
 		lua_error(L);
 	}
@@ -2756,7 +2778,7 @@ int script_pline_append (lua_State *L) {
 	}
 	struct ent_lua *ent_obj;
 	
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "pline_append: incorrect argument type");
 		lua_error(L);
 	}
@@ -2810,7 +2832,7 @@ int script_pline_close (lua_State *L) {
 	}
 	struct ent_lua *ent_obj;
 	
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "pline_close: incorrect argument type");
 		lua_error(L);
 	}
@@ -3430,7 +3452,7 @@ int script_new_block (lua_State *L) {
 	lua_pushnil(L);  /* first key */
 	while (lua_next(L, 1) != 0) { /* table index are shifted*/
 		/* uses 'key' (at index -2) and 'value' (at index -1) */
-		if ( ent_obj =  luaL_checkudata(L, -1, "cz_ent_obj") ){
+		if ( ent_obj =  udata_check(L, -1, "cz_ent_obj") ){
 			/* get entity */
 			obj = ent_obj->curr_ent;  /*try to get current entity */
 			if (!obj) obj = ent_obj->orig_ent; /* if not current, try original entity */
@@ -5115,7 +5137,7 @@ int script_pdf_page(lua_State *L){
 		lua_pushliteral(L, "page: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( pdf =  luaL_checkudata(L, 1, "cz_pdf_obj") )) { /* the pdf object is a Lua userdata type*/
+	if (!( pdf =  udata_check(L, 1, "cz_pdf_obj") )) { /* the pdf object is a Lua userdata type*/
 		lua_pushliteral(L, "page: incorrect argument type");
 		lua_error(L);
 	}
@@ -5331,7 +5353,7 @@ int script_pdf_save (lua_State *L) {
 	
 	struct script_pdf *pdf;
 	
-	if (!( pdf =  luaL_checkudata(L, 1, "cz_pdf_obj") )) { /* the pdf object is a Lua userdata type*/
+	if (!( pdf =  udata_check(L, 1, "cz_pdf_obj") )) { /* the pdf object is a Lua userdata type*/
 		lua_pushliteral(L, "save: incorrect argument type");
 		lua_error(L);
 	}
@@ -5363,7 +5385,7 @@ int script_pdf_close(lua_State *L){
 		lua_pushliteral(L, "close: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( pdf =  luaL_checkudata(L, 1, "cz_pdf_obj") )) { /* the pdf object is a Lua userdata type*/
+	if (!( pdf =  udata_check(L, 1, "cz_pdf_obj") )) { /* the pdf object is a Lua userdata type*/
 		lua_pushliteral(L, "close: incorrect argument type");
 		lua_error(L);
 	}
@@ -5544,7 +5566,7 @@ int script_ent_draw (lua_State *L) {
 	
 	struct ent_lua *ent_obj;
 	
-	if (!( ent_obj =  luaL_checkudata(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
+	if (!( ent_obj =  udata_check(L, 1, "cz_ent_obj") )) { /* the entity is a Lua userdata type*/
 		lua_pushliteral(L, "ent_draw: incorrect argument type");
 		lua_error(L);
 	}
@@ -5790,7 +5812,7 @@ int script_nk_button_img (lua_State *L) {
 	
   struct script_rast_image * img_obj;
   
-  if (!( img_obj = luaL_checkudata(L, 1, "Rast_img") )) { /* the Rast_img object is a Lua userdata type*/
+  if (!( img_obj = udata_check(L, 1, "Rast_img") )) { /* the Rast_img object is a Lua userdata type*/
 		lua_pushliteral(L, "nk_button_img: incorrect argument type");
 		lua_error(L);
 	}
@@ -6838,7 +6860,7 @@ int script_miniz_close (lua_State *L) {
 		lua_pushliteral(L, "close: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( zip =  luaL_checkudata(L, 1, "Zip") )) { /* the Zip object is a Lua userdata type*/
+	if (!( zip =  udata_check(L, 1, "Zip") )) { /* the Zip object is a Lua userdata type*/
 		lua_pushliteral(L, "close: incorrect argument type");
 		lua_error(L);
 	}
@@ -6871,7 +6893,7 @@ int script_miniz_read (lua_State *L) {
 		lua_pushliteral(L, "read: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( zip =  luaL_checkudata(L, 1, "Zip") )) { /* the Zip object is a Lua userdata type*/
+	if (!( zip =  udata_check(L, 1, "Zip") )) { /* the Zip object is a Lua userdata type*/
 		lua_pushliteral(L, "read: incorrect argument type");
 		lua_error(L);
 	}
@@ -6999,7 +7021,7 @@ int script_yxml_close (lua_State *L) {
 		lua_pushliteral(L, "close: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( state =  luaL_checkudata(L, 1, "Yxml") )) { /* the Yxml object is a Lua userdata type*/
+	if (!( state =  udata_check(L, 1, "Yxml") )) { /* the Yxml object is a Lua userdata type*/
 		lua_pushliteral(L, "close: incorrect argument type");
 		lua_error(L);
 	}
@@ -7036,7 +7058,7 @@ int script_yxml_read (lua_State *L) {
 		lua_pushliteral(L, "read: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( state =  luaL_checkudata(L, 1, "Yxml") )) { /* the parser is a Lua userdata type*/
+	if (!( state =  udata_check(L, 1, "Yxml") )) { /* the parser is a Lua userdata type*/
 		lua_pushliteral(L, "read: incorrect argument type");
 		lua_error(L);
 	}
@@ -7531,7 +7553,7 @@ int script_sqlite_exec(lua_State *L){
 		lua_pushliteral(L, "exec: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( db =  luaL_checkudata(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
+	if (!( db =  udata_check(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
 		lua_pushliteral(L, "exec: incorrect argument type");
 		lua_error(L);
 	}
@@ -7591,7 +7613,7 @@ int script_sqlite_changes(lua_State *L){
 		lua_pushliteral(L, "changes: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( db =  luaL_checkudata(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
+	if (!( db =  udata_check(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
 		lua_pushliteral(L, "changes: incorrect argument type");
 		lua_error(L);
 	}
@@ -7620,7 +7642,7 @@ int script_sqlite_cols(lua_State *L){
 		lua_pushliteral(L, "close: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( db =  luaL_checkudata(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
+	if (!( db =  udata_check(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
 		lua_pushliteral(L, "close: incorrect argument type");
 		lua_error(L);
 	}
@@ -7631,7 +7653,7 @@ int script_sqlite_cols(lua_State *L){
 	luaL_argcheck(L, lua_isstring(L, 2), 2, "string expected");
 	
 	/* create a Sqlite_stmt object */
-	sqlite3_stmt **stmt = (sqlite3_stmt **) lua_newuserdata(L, sizeof(sqlite3_stmt *));
+	sqlite3_stmt **stmt = (sqlite3_stmt **) lua_newuserdatauv(L, sizeof(sqlite3_stmt *), 0);
 	luaL_getmetatable(L, "Sqlite_stmt");
 	lua_setmetatable(L, -2);
 	
@@ -7661,7 +7683,7 @@ int script_sqlite_rows(lua_State *L){
 		lua_pushliteral(L, "close: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( db =  luaL_checkudata(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
+	if (!( db =  udata_check(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
 		lua_pushliteral(L, "close: incorrect argument type");
 		lua_error(L);
 	}
@@ -7672,7 +7694,7 @@ int script_sqlite_rows(lua_State *L){
 	luaL_argcheck(L, lua_isstring(L, 2), 2, "string expected");
 	
 	/* create a Sqlite_stmt object */
-	sqlite3_stmt **stmt = (sqlite3_stmt **) lua_newuserdata(L, sizeof(sqlite3_stmt *));
+	sqlite3_stmt **stmt = (sqlite3_stmt **) lua_newuserdatauv(L, sizeof(sqlite3_stmt *), 0);
 	luaL_getmetatable(L, "Sqlite_stmt");
 	lua_setmetatable(L, -2);
 	
@@ -7736,7 +7758,7 @@ int script_sqlite_close(lua_State *L){
 		lua_pushliteral(L, "close: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( db =  luaL_checkudata(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
+	if (!( db =  udata_check(L, 1, "Sqlite_db") )) { /* the Sqlite_db object is a Lua userdata type*/
 		lua_pushliteral(L, "close: incorrect argument type");
 		lua_error(L);
 	}
@@ -7997,7 +8019,7 @@ int script_get_do_point (lua_State *L) {
 	struct script_do_point * do_point;
 	
 	/* create a userdata object */
-	do_point = (struct script_do_point *) lua_newuserdata(L, sizeof(struct script_do_point)); 
+	do_point = (struct script_do_point *) lua_newuserdatauv(L, sizeof(struct script_do_point), 0); 
 	luaL_getmetatable(L, "cz_do_obj");
 	lua_setmetatable(L, -2);
 	
@@ -8010,6 +8032,67 @@ int script_get_do_point (lua_State *L) {
   do_point->current = gui->list_do.current;
 	
 	return 1;
+}
+
+/* get data of do_point object */
+/* given parameters:
+	- index
+returns:
+	- data of named index, or nil if fail
+*/
+int script_do_get_data (lua_State *L) {
+  /* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	struct script_do_point * do_point;
+  
+	
+	/* verify passed arguments */
+	int n = lua_gettop(L);    /* number of arguments */
+	if (n < 2){
+		lua_pushliteral(L, "sync: invalid number of arguments");
+		lua_error(L);
+	}
+	if (!( do_point = udata_check(L, 1, "cz_do_obj") )) { /* the object is a Lua userdata type*/
+		lua_pushliteral(L, "sync: incorrect argument type");
+		lua_error(L);
+	}
+  
+  if (!lua_isstring(L, 2)){
+    lua_pushnil(L); /* return fail */
+		return 1;
+  }
+  
+  const char *index = lua_tostring (L, 2);
+	
+  if (strcmp(index, "text") == 0){
+    lua_pushstring(L, do_point->current->text);
+    return 1;
+  }
+  else if (strcmp(index, "uuid") == 0){
+    lua_pushstring(L, do_point->current->uuid);
+    return 1;
+  }
+  else if (strcmp(index, "time") == 0){
+    lua_pushnumber(L, do_point->current->time);
+    return 1;
+  }
+  else if (strcmp(index, "seq") == 0){
+    lua_pushinteger(L, do_point->hist_pos);
+    return 1;
+  }
+	
+	lua_pushnil(L); /* return fail */
+  return 1;
 }
 
 /* sync the do_point with gui hist point */
@@ -8039,7 +8122,7 @@ int script_do_sync (lua_State *L) {
 		lua_pushliteral(L, "sync: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( do_point =  luaL_checkudata(L, 1, "cz_do_obj") )) { /* the object is a Lua userdata type*/
+	if (!( do_point = udata_check(L, 1, "cz_do_obj") )) { /* the object is a Lua userdata type*/
 		lua_pushliteral(L, "sync: incorrect argument type");
 		lua_error(L);
 	}
@@ -8078,7 +8161,7 @@ int script_do_changes (lua_State *L) {
 		lua_pushliteral(L, "changes: invalid number of arguments");
 		lua_error(L);
 	}
-	if (!( do_point =  luaL_checkudata(L, 1, "cz_do_obj") )) { /* the object is a Lua userdata type*/
+	if (!( do_point = udata_check(L, 1, "cz_do_obj") )) { /* the object is a Lua userdata type*/
 		lua_pushliteral(L, "changes: incorrect argument type");
 		lua_error(L);
 	}

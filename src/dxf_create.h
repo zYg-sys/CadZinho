@@ -27,7 +27,7 @@ struct do_entry {
 	char text[ACT_CHARS];
   char uuid[ACT_CHARS];
   double time;
-  unsigned int seq;
+  
 	struct do_item *list;
 	struct do_item *current;
 };

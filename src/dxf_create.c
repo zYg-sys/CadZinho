@@ -179,7 +179,6 @@ int do_add_entry(struct do_list *list, char *text){
 	if (list != NULL){
 		struct do_entry *entry = do_mem_pool(ADD_DO_ENTRY);
 		if ((entry) && (list->current) && (list->list)){
-      entry->seq = list->count;
       
       if (list->count < DO_HIST_SZ){
         list->hist[list->count].entry = entry;
@@ -225,7 +224,6 @@ int init_do_list(struct do_list *list){
 			entry->next = NULL;
 			entry->list = NULL;
 			entry->current = NULL;
-      entry->seq = 0;
 			
 			entry->text[0] = 0; /* no string */
       entry->uuid[0] = 0; /* no uuid */
@@ -268,7 +266,7 @@ int do_redo(struct do_list *list){
 			entry = entry->next;
 			struct do_item *curr_item = entry->list;
 			while (curr_item){
-				ret =1;
+				ret = 1;
 				dxf_obj_subst(curr_item->old_obj, curr_item->new_obj);
 				curr_item = curr_item->next;
 			}
