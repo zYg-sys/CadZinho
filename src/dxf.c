@@ -1821,6 +1821,9 @@ int dxf_read (dxf_drawing *drawing, char *buf, long fsize, int *prog){
 		
 		/*find the handle seed */
 		drawing->hand_seed = dxf_find_attr2(drawing->head, 5);
+    
+    /*find the main Dictonary */
+    drawing->main_dict = dxf_find_obj2(drawing->objs, "DICTIONARY");
 		
 		/*get drawing version*/
 		dxf_node *version, *start = NULL, *end = NULL;
@@ -2033,6 +2036,7 @@ int dxf_drawing_clear (dxf_drawing *drawing){
 		drawing->main_struct = NULL;
 		
 		drawing->hand_seed = NULL;
+    drawing->main_dict = NULL;
 		drawing->num_layers = 0;
 		drawing->num_ltypes = 0;
 		drawing->num_tstyles = 0;
@@ -2862,4 +2866,37 @@ int dxf_find_last_blk (dxf_drawing *drawing, char *mark){
 	}
 	
 	return last;
+}
+
+dxf_node * dxf_find_dict(dxf_drawing *drawing, dxf_node * owner, char *name){
+  if (!name) return NULL;  /* error */
+  if (!strlen(name)) return NULL;  /* error */
+  if (!drawing) 
+		return NULL; /* error -  not drawing */
+  if (!drawing->objs)
+    return NULL; /* error -  not drawing */
+  if (!owner) 
+		return NULL; /* error -  not owner */
+  if (owner->type != DXF_ENT)
+    return NULL; /* error -  not owner */
+  /* owner must be a dictionary */
+  STRPOOL_U64 id = strpool_inject(&obj_pool, "DICTIONARY", 10);
+  if (owner->obj.id != id) return NULL; /* error -  not valid owner */
+  
+  STRPOOL_U64 name_ptr = strpool_inject(&value_pool, (const char*) name, (int) strlen(name));
+  
+  dxf_node *next = NULL, *name_attr, *value = NULL;
+  
+  while(name_attr = dxf_find_attr_nxt(owner, &next, 3)){
+    if(name_attr->value.str == name_ptr){
+      value = dxf_find_attr_nxt(owner, &next, 350);
+      break;
+    }
+  }
+  
+  if (!value) return NULL;
+  
+  long int handle = strtol(strpool_cstr2( &value_pool, value->value.str), NULL, 16);
+  
+	return dxf_find_handle(drawing->objs, handle);
 }

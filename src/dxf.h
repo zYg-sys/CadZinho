@@ -234,6 +234,9 @@ struct Dxf_drawing{
 	dxf_node *main_struct;
 	
 	dxf_node *hand_seed; /* handle generator */
+  
+  /* main DICTIONARY */
+	dxf_node *main_dict;
 	
 	dxf_layer layers[DXF_MAX_LAYERS];
 	int num_layers;
@@ -379,5 +382,7 @@ int dxf_xref_clear_list(dxf_drawing *drawing);
 void dxf_xref_assemb (dxf_drawing *drawing);
 
 int dxf_find_last_blk (dxf_drawing *drawing, char *mark);
+
+dxf_node * dxf_find_dict(dxf_drawing *drawing, dxf_node * owner, char *name);
 
 #endif

@@ -3070,3 +3070,175 @@ int color, char *layer, char *ltype, int lw, int paper, int pool){
 
 	return NULL;
 }
+
+dxf_node * dxf_new_dict (dxf_drawing *drawing, dxf_node *owner, char *name){
+	
+  if (!drawing) 
+		return NULL; /* error -  not drawing */
+  if (!drawing->objs)
+    return NULL; /* error -  not drawing */
+  if (!owner) 
+		owner = drawing->main_dict; /* try to use main dictionary as owner */
+  if (!owner)
+		return NULL; /* error -  not owner */
+  if (owner->type != DXF_ENT)
+    return NULL; /* error -  not owner */
+  
+  /* check if owner is a dictionary */
+  int dict_own = 0;
+  STRPOOL_U64 id = strpool_inject(&obj_pool, "DICTIONARY", 10);
+  if (owner->obj.id == id) {
+    if (!name) return NULL;  /* error */
+    if (!strlen(name)) return NULL;  /* error */
+    dict_own = 1;
+  }
+  
+  const char *zero = "0";
+  char *handle = (char*) zero;
+  dxf_node * hdl_obj = dxf_find_attr2(owner, 5);
+	if (hdl_obj)
+    handle = (char*) strpool_cstr2( &value_pool, hdl_obj->value.str);
+  
+  /* create a new DICTIONARY object */
+	const char *dxf_class = "AcDbDictionary";
+	int ok = 1;
+	dxf_node * new_dict = dxf_obj_new ("DICTIONARY", drawing->pool);
+  if (!new_dict) return NULL; /* error */
+	
+	ok &= dxf_attr_append(new_dict, 5, (void *) zero, drawing->pool);
+	ok &= dxf_attr_append(new_dict, 330, (void *) handle, drawing->pool);
+	ok &= dxf_attr_append(new_dict, 100, (void *) dxf_class, drawing->pool);
+  ok &= dxf_attr_append(new_dict, 281, (void *) (int[]){1}, drawing->pool);
+	
+	if(!ok) return NULL;
+  if(!ent_handle(drawing, new_dict)) return NULL;
+	dxf_obj_append(drawing->objs, new_dict);
+  
+  hdl_obj = dxf_find_attr2(new_dict, 5);
+	if (hdl_obj)
+    handle = (char*) strpool_cstr2( &value_pool, hdl_obj->value.str);
+  
+  /* case owner is a dictionary */
+  if (dict_own) {
+    dxf_attr_append(owner, 3, (void *) name, drawing->pool);
+    dxf_attr_append(owner, 350, (void *) handle, drawing->pool);
+  }
+  /* other entities */
+  else {
+    hdl_obj = dxf_find_attr2(owner, 5);
+    hdl_obj = dxf_attr_insert_after(hdl_obj, 102, (void *) "{ACAD_XDICTIONARY", drawing->pool);
+    hdl_obj = dxf_attr_insert_after(hdl_obj, 360, (void *) handle, drawing->pool);
+    hdl_obj = dxf_attr_insert_after(hdl_obj, 102, (void *) "}", drawing->pool);
+  }
+  
+  return new_dict;
+}
+
+dxf_node * dxf_new_dict_var (dxf_drawing *drawing, dxf_node *owner, char *name, char *value){
+	if (!name) return NULL;  /* error */
+  if (!strlen(name)) return NULL;  /* error */
+  if (!value) return NULL;  /* error */
+  if (!strlen(value)) return NULL;  /* error */
+  if (!drawing) 
+		return NULL; /* error -  not drawing */
+  if (!drawing->objs)
+    return NULL; /* error -  not drawing */
+  if (!owner) 
+		return NULL; /* error -  not owner */
+  if (owner->type != DXF_ENT)
+    return NULL; /* error -  not owner */
+  /* owner must be a dictionary */
+  STRPOOL_U64 id = strpool_inject(&obj_pool, "DICTIONARY", 10);
+  if (owner->obj.id != id) return NULL; /* error -  not valid owner */
+  
+  const char *zero = "0";
+  char *handle = (char*) zero;
+  dxf_node * hdl_obj = dxf_find_attr2(owner, 5);
+	if (hdl_obj)
+    handle = (char*) strpool_cstr2( &value_pool, hdl_obj->value.str);
+  
+  /* create a new DICTIONARYVAR object */
+	const char *dxf_class = "DictionaryVariables";
+	int ok = 1;
+	dxf_node * new_dictv = dxf_obj_new ("DICTIONARYVAR", drawing->pool);
+  if (!new_dictv) return NULL; /* error */
+	
+	ok &= dxf_attr_append(new_dictv, 5, (void *) zero, drawing->pool);
+	ok &= dxf_attr_append(new_dictv, 330, (void *) handle, drawing->pool);
+	ok &= dxf_attr_append(new_dictv, 100, (void *) dxf_class, drawing->pool);
+  ok &= dxf_attr_append(new_dictv, 280, (void *) (int[]){0}, drawing->pool);
+  ok &= dxf_attr_append(new_dictv, 1, (void *) value, drawing->pool);
+	
+	if(!ok) return NULL;
+  if(!ent_handle(drawing, new_dictv)) return NULL;
+	dxf_obj_append(drawing->objs, new_dictv);
+  
+  hdl_obj = dxf_find_attr2(new_dictv, 5);
+	if (hdl_obj)
+    handle = (char*) strpool_cstr2( &value_pool, hdl_obj->value.str);
+  dxf_attr_append(owner, 3, (void *) name, drawing->pool);
+  dxf_attr_append(owner, 350, (void *) handle, drawing->pool);
+  
+  return new_dictv;
+}
+
+dxf_node * dxf_new_xrecord (dxf_drawing *drawing, dxf_node *owner, char *name){
+	if (!name) return NULL;  /* error */
+  if (!strlen(name)) return NULL;  /* error */
+  if (!drawing) 
+		return NULL; /* error -  not drawing */
+  if (!drawing->objs)
+    return NULL; /* error -  not drawing */
+  if (!owner) 
+		return NULL; /* error -  not owner */
+  if (owner->type != DXF_ENT)
+    return NULL; /* error -  not owner */
+  /* owner must be a dictionary */
+  STRPOOL_U64 id = strpool_inject(&obj_pool, "DICTIONARY", 10);
+  if (owner->obj.id != id) return NULL; /* error -  not valid owner */
+  
+  const char *zero = "0";
+  char *handle = (char*) zero;
+  dxf_node * hdl_obj = dxf_find_attr2(owner, 5);
+	if (hdl_obj)
+    handle = (char*) strpool_cstr2( &value_pool, hdl_obj->value.str);
+  
+  /* create a new DICTIONARY object */
+	const char *dxf_class = "AcDbXrecord";
+	int ok = 1;
+	dxf_node * new_dict = dxf_obj_new ("XRECORD", drawing->pool);
+  if (!new_dict) return NULL; /* error */
+	
+	ok &= dxf_attr_append(new_dict, 5, (void *) zero, drawing->pool);
+	ok &= dxf_attr_append(new_dict, 330, (void *) handle, drawing->pool);
+	ok &= dxf_attr_append(new_dict, 100, (void *) dxf_class, drawing->pool);
+  ok &= dxf_attr_append(new_dict, 281, (void *) (int[]){1}, drawing->pool);
+	
+	if(!ok) return NULL;
+  if(!ent_handle(drawing, new_dict)) return NULL;
+	dxf_obj_append(drawing->objs, new_dict);
+  
+  hdl_obj = dxf_find_attr2(new_dict, 5);
+	if (hdl_obj)
+    handle = (char*) strpool_cstr2( &value_pool, hdl_obj->value.str);
+  dxf_attr_append(owner, 3, (void *) name, drawing->pool);
+  dxf_attr_append(owner, 350, (void *) handle, drawing->pool);
+  
+  return new_dict;
+}
+
+int dxf_xrecord_append (dxf_node *owner, int group, void *value, int pool){
+	if (!value) return 0;  /* error */
+  if (!owner) 
+		return 0; /* error -  not owner */
+  if (owner->type != DXF_ENT)
+    return 0; /* error -  not owner */
+  /* owner must be a xrecord */
+  STRPOOL_U64 id = strpool_inject(&obj_pool, "XRECORD", 7);
+  if (owner->obj.id != id) return 0; /* error -  not valid owner */
+  
+  if (group < 1 || group > 369 || group == 100 || 
+    group == 102 || group == 5 || group == 105) return 0; /* error - invalid group */
+	
+  return dxf_attr_append(owner, group, (void *) value, pool);
+}

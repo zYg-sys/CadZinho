@@ -201,4 +201,12 @@ int dxf_new_dim_sty (dxf_drawing *drawing, dxf_dimsty dim_sty);
 dxf_node * dxf_new_point (double x0, double y0, double z0,
 int color, char *layer, char *ltype, int lw, int paper, int pool);
 
+dxf_node * dxf_new_dict (dxf_drawing *drawing, dxf_node *owner, char *name);
+
+dxf_node * dxf_new_dict_var (dxf_drawing *drawing, dxf_node *owner, char *name, char *value);
+
+dxf_node * dxf_new_xrecord (dxf_drawing *drawing, dxf_node *owner, char *name);
+
+int dxf_xrecord_append (dxf_node *owner, int group, void *value, int pool);
+
 #endif
