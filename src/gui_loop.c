@@ -656,8 +656,38 @@ int gui_main_loop (gui_obj *gui) {
         }
       }
       
+      /* get active viewport */
+      start = dxf_find_obj_descr2(gui->drawing->t_vport, "VPORT", "*ACTIVE");
+      if (start) {
+        double x = 0.0, y = 0.0, z = 0.0, h = 1.0, ar = 1.0;
+        part = dxf_find_attr2(start, 17);
+        if (part != NULL){
+          x = part->value.d_data;
+        }
+        part = dxf_find_attr2(start, 27);
+        if (part != NULL){
+          y = part->value.d_data;
+        }
+        part = dxf_find_attr2(start, 37);
+        if (part != NULL){
+          z = part->value.d_data;
+        }
+        part = dxf_find_attr2(start, 40);
+        if (part != NULL){
+          h = part->value.d_data;
+        }
+        part = dxf_find_attr2(start, 41);
+        if (part != NULL){
+          ar = part->value.d_data;
+        }
+        /* convert and apply vport params to display */
+        gui->zoom = 800.0 / h;
+        gui->ofs_x = x - (gui->win_w - 800 * ar)/(2.0 * gui->zoom);
+        gui->ofs_y = y - h / 2.0;
+      }
+      else gui->action = VIEW_ZOOM_EXT;
+      
       dxf_ents_parse(gui->drawing);				
-      gui->action = VIEW_ZOOM_EXT;
       gui->layer_idx = dxf_lay_idx (gui->drawing,
         strpool_inject( &name_pool, "0", 1));
       gui->ltypes_idx = dxf_ltype_idx (gui->drawing,
@@ -786,6 +816,37 @@ int gui_main_loop (gui_obj *gui) {
     
     update_title = 1;
     
+    /* get active viewport */
+    start = dxf_find_obj_descr2(gui->drawing->t_vport, "VPORT", "*ACTIVE");
+    if (start) {
+      double x = 0.0, y = 0.0, z = 0.0, h = 1.0, ar = 1.0;
+      part = dxf_find_attr2(start, 17);
+      if (part != NULL){
+        x = part->value.d_data;
+      }
+      part = dxf_find_attr2(start, 27);
+      if (part != NULL){
+        y = part->value.d_data;
+      }
+      part = dxf_find_attr2(start, 37);
+      if (part != NULL){
+        z = part->value.d_data;
+      }
+      part = dxf_find_attr2(start, 40);
+      if (part != NULL){
+        h = part->value.d_data;
+      }
+      part = dxf_find_attr2(start, 41);
+      if (part != NULL){
+        ar = part->value.d_data;
+      }
+      /* convert and apply vport params to display */
+      gui->zoom = 800.0 / h;
+      gui->ofs_x = x - (gui->win_w - 800 * ar)/(2.0 * gui->zoom);
+      gui->ofs_y = y - h / 2.0;
+    }
+    else gui->action = VIEW_ZOOM_EXT;
+    
     if (gui->script_resume_reason == YIELD_DRWG_NEW){
       gui->script_resume_reason = YIELD_NONE;
       gui->script_resume = 1;
@@ -907,6 +968,32 @@ int gui_main_loop (gui_obj *gui) {
     else{
       dxf_attr_append(gui->drawing->head, 9, "$VERSIONGUID", DWG_LIFE);
       dxf_attr_append(gui->drawing->head, 2, gui->list_do.current->uuid, DWG_LIFE);
+    }
+    
+    /* get active viewport */
+    start = dxf_find_obj_descr2(gui->drawing->t_vport, "VPORT", "*ACTIVE");
+    if (start) {
+      /* convert and apply display params to vport object to store */
+      double x = 0.0, y = 0.0, z = 0.0, h = 1.0, ar = 0.99;
+      
+      h = 800.0 / gui->zoom;
+      x = gui->ofs_x + (gui->win_w - 800 * ar)/(2.0 * gui->zoom);
+      y = gui->ofs_y + h / 2.0;
+      
+      dxf_attr_change(start, 10, (void *) (double[]){0.0});
+      dxf_attr_change(start, 20, (void *) (double[]){0.0});
+      dxf_attr_change(start, 11, (void *) (double[]){1.0});
+      dxf_attr_change(start, 21, (void *) (double[]){1.0});
+      dxf_attr_change(start, 12, (void *) (double[]){0.5});
+      dxf_attr_change(start, 22, (void *) (double[]){0.5});
+      dxf_attr_change(start, 16, (void *) (double[]){0.0});
+      dxf_attr_change(start, 26, (void *) (double[]){0.0});
+      dxf_attr_change(start, 36, (void *) (double[]){1.0});
+      dxf_attr_change(start, 17, (void *) &x);
+      dxf_attr_change(start, 27, (void *) &y);
+      dxf_attr_change(start, 37, (void *) &z);
+      dxf_attr_change(start, 40, (void *) &h);
+      dxf_attr_change(start, 41, (void *) &ar);
     }
     
     if (dxf_save (gui->curr_path, gui->drawing)){

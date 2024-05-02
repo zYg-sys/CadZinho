@@ -496,6 +496,37 @@ int main(int argc, char** argv){
     dxf_attr_append(gui->drawing->head, 2, uuid_str, DWG_LIFE);
   }
   
+  /* get active viewport */
+  start = dxf_find_obj_descr2(gui->drawing->t_vport, "VPORT", "*ACTIVE");
+  if (start) {
+    double x = 0.0, y = 0.0, z = 0.0, h = 1.0, ar = 1.0;
+    part = dxf_find_attr2(start, 17);
+    if (part != NULL){
+      x = part->value.d_data;
+    }
+    part = dxf_find_attr2(start, 27);
+    if (part != NULL){
+      y = part->value.d_data;
+    }
+    part = dxf_find_attr2(start, 37);
+    if (part != NULL){
+      z = part->value.d_data;
+    }
+    part = dxf_find_attr2(start, 40);
+    if (part != NULL){
+      h = part->value.d_data;
+    }
+    part = dxf_find_attr2(start, 41);
+    if (part != NULL){
+      ar = part->value.d_data;
+    }
+    /* convert and apply vport params to display */
+    gui->zoom = 800.0 / h;
+    gui->ofs_x = x - (gui->win_w - 800 * ar)/(2.0 * gui->zoom);
+    gui->ofs_y = y - h / 2.0;
+  }
+  else gui->action = VIEW_ZOOM_EXT;
+  
   strncpy (gui->list_do.current->uuid, uuid_str, ACT_CHARS - 1);
   gui->list_do.current->time = curr_time;
   
