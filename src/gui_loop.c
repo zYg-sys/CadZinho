@@ -48,7 +48,11 @@ int gui_main_loop (gui_obj *gui) {
 	
 	static char function_key[20] = "";
   
-  static int update_title = 0, changed = 0;
+  static int update_title = 0, changed = 0, framebuf = 1;
+  
+  static double prev_ofs_x, prev_ofs_y, prev_zoom;
+  
+  static struct do_entry *prev_do = NULL; //gui->list_do.current;
   
   static int open_prg = 0;
 	static int progr_win = 0;
@@ -709,6 +713,8 @@ int gui_main_loop (gui_obj *gui) {
     
   }
   else gui->low_proc = 1;
+  
+  
   
   
   /*===============================*/
@@ -1481,10 +1487,10 @@ int gui_main_loop (gui_obj *gui) {
     SDL_GetWindowPosition (gui->window, &gui->win_x, &gui->win_y);
     
     
-    glUniform1i(gui->gl_ctx.tex_uni, 0);
+    //glUniform1i(gui->gl_ctx.tex_uni, 0);
     
     SDL_GetWindowSize(gui->window, &gui->gl_ctx.win_w, &gui->gl_ctx.win_h);
-    glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
+    //glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
     
     d_param.ofs_x = gui->ofs_x;
     d_param.ofs_y = gui->ofs_y;
@@ -1536,6 +1542,35 @@ int gui_main_loop (gui_obj *gui) {
     glDepthFunc(GL_LEQUAL);
     
     
+    /* --------------------*/
+    if (prev_ofs_x != gui->ofs_x || prev_ofs_y != gui->ofs_y ||
+      prev_zoom != gui->zoom || prev_do != gui->list_do.current)
+    {
+      glBindFramebuffer(GL_FRAMEBUFFER, gui->gl_ctx.fbo);
+      glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
+      
+      /* Clear the screen to background color */
+      glClearColor(1.0, 1.0, 1.0, 0.0);
+      glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+      #ifndef GLES2
+      if (gui->gl_ctx.elems == NULL){
+        gui->gl_ctx.verts = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        gui->gl_ctx.elems = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+      }
+      #endif
+      gui->gl_ctx.vert_count = 0;
+      gui->gl_ctx.elem_count = 0;
+      glUniform1i(gui->gl_ctx.tex_uni, 0);
+      
+      dxf_ents_draw_gl(gui->drawing, &gui->gl_ctx, d_param);
+      
+      draw_gl (&gui->gl_ctx, 1); /* force draw and cleanup */
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
+    
+    /*------------*/
+    
     /* Clear the screen to background color */
     glClearColor((GLfloat) gui->background.r/255, (GLfloat) gui->background.g/255, 
       (GLfloat) gui->background.b/255, 1.0);
@@ -1548,13 +1583,74 @@ int gui_main_loop (gui_obj *gui) {
     #endif
     gui->gl_ctx.vert_count = 0;
     gui->gl_ctx.elem_count = 0;
+    
+    gui->gl_ctx.transf[0][0] = 1.0;
+		gui->gl_ctx.transf[0][1] = 0.0;
+		gui->gl_ctx.transf[0][2] = 0.0;
+		gui->gl_ctx.transf[0][3] = 0.0;
+		gui->gl_ctx.transf[1][0] = 0.0;
+		gui->gl_ctx.transf[1][1] = 1.0;
+		gui->gl_ctx.transf[1][2] = 0.0;
+		gui->gl_ctx.transf[1][3] = 0.0;
+		gui->gl_ctx.transf[2][0] = 0.0;
+		gui->gl_ctx.transf[2][1] = 0.0;
+		gui->gl_ctx.transf[2][2] = 1.0;
+		gui->gl_ctx.transf[2][3] = 0.0;
+		gui->gl_ctx.transf[3][0] = 0.0;
+		gui->gl_ctx.transf[3][1] = 0.0;
+		gui->gl_ctx.transf[3][2] = 0.0;
+		gui->gl_ctx.transf[3][3] = 1.0;
+    
+    gui->gl_ctx.model[0][0] = 1.0;
+		gui->gl_ctx.model[0][1] = 0.0;
+		gui->gl_ctx.model[0][2] = 0.0;
+		gui->gl_ctx.model[1][0] = 0.0;
+		gui->gl_ctx.model[1][1] = 1.0;
+		gui->gl_ctx.model[1][2] = 0.0;
+		gui->gl_ctx.model[2][0] = 0.0;
+		gui->gl_ctx.model[2][1] = 0.0;
+		gui->gl_ctx.model[2][2] = 1.0;
+    
+    
+    dxf_draw_framebuffer(&gui->gl_ctx, gui->gl_ctx.win_w, gui->gl_ctx.win_h); //-----------
+    
     glUniform1i(gui->gl_ctx.tex_uni, 0);
+    
+    /* 3D test */
+    gui->gl_ctx.transf[0][0] = gui->drwg_view[0][0];
+    gui->gl_ctx.transf[0][1] = gui->drwg_view[0][1];
+    gui->gl_ctx.transf[0][2] = gui->drwg_view[0][2];
+    gui->gl_ctx.transf[0][3] = gui->drwg_view[0][3];
+    gui->gl_ctx.transf[1][0] = gui->drwg_view[1][0];
+    gui->gl_ctx.transf[1][1] = gui->drwg_view[1][1];
+    gui->gl_ctx.transf[1][2] = gui->drwg_view[1][2];
+    gui->gl_ctx.transf[1][3] = gui->drwg_view[1][3];
+    gui->gl_ctx.transf[2][0] = gui->drwg_view[2][0];
+    gui->gl_ctx.transf[2][1] = gui->drwg_view[2][1];
+    gui->gl_ctx.transf[2][2] = gui->drwg_view[2][2];
+    gui->gl_ctx.transf[2][3] = gui->drwg_view[2][3];
+    gui->gl_ctx.transf[3][0] = gui->drwg_view[3][0];
+    gui->gl_ctx.transf[3][1] = gui->drwg_view[3][1];
+    gui->gl_ctx.transf[3][2] = gui->drwg_view[3][2];
+    gui->gl_ctx.transf[3][3] = gui->drwg_view[3][3];
+    
+    gui->gl_ctx.model[0][0] = gui->model_view[0][0];
+    gui->gl_ctx.model[0][1] = gui->model_view[0][1];
+    gui->gl_ctx.model[0][2] = gui->model_view[0][2];
+    gui->gl_ctx.model[1][0] = gui->model_view[1][0];
+    gui->gl_ctx.model[1][1] = gui->model_view[1][1];
+    gui->gl_ctx.model[1][2] = gui->model_view[1][2];
+    gui->gl_ctx.model[2][0] = gui->model_view[2][0];
+    gui->gl_ctx.model[2][1] = gui->model_view[2][1];
+    gui->gl_ctx.model[2][2] = gui->model_view[2][2];
+    
+    glDepthFunc(GL_ALWAYS);
     
     /* draw grid */
     if (gui->grid_flags) draw_grid_gl(gui);
     draw_orign_gl(gui);
     
-    dxf_ents_draw_gl(gui->drawing, &gui->gl_ctx, d_param);
+    //dxf_ents_draw_gl(gui->drawing, &gui->gl_ctx, d_param);
     
     if (!gui->pan_mode) 
       draw_cursor_gl(gui, gui->mouse_x, gui->mouse_y, gui->cursor);
@@ -1562,7 +1658,7 @@ int gui_main_loop (gui_obj *gui) {
     draw_gl (&gui->gl_ctx, 1); /* force draw and cleanup */
     //glReadPixels(gui->mouse_x, gui->mouse_y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &gui->mouse_z);
     
-    glDepthFunc(GL_ALWAYS);
+    
     
     
     /*hilite test */
@@ -1674,6 +1770,11 @@ int gui_main_loop (gui_obj *gui) {
     SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEMOTION);
   }
   #endif
+  
+  prev_ofs_x = gui->ofs_x;
+  prev_ofs_y = gui->ofs_y;
+  prev_zoom = gui->zoom;
+  prev_do = gui->list_do.current;
   
   return gui->running;
 }

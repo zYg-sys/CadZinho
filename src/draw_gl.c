@@ -173,10 +173,12 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
   #endif
 		glLinkProgram(shaderProgram);
 		glUseProgram(shaderProgram);
-			
+
 		/*texture */
-		GLuint textures[2];
-		glGenTextures(2, textures);
+		//GLuint textures[2];
+    GLuint textures[3];/* -------- test frame buffer --- */
+		//glGenTextures(2, textures);
+    glGenTextures(3, textures);/* -------- test frame buffer --- */
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textures[0]);
@@ -199,7 +201,59 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gui->gl_ctx.tex_w, gui->gl_ctx.tex_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+/* -------- test frame buffer --- */
+    GLuint fbo = 0;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    
+    glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, textures[2]);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 3840, 2160, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    
+    // attach it to currently bound framebuffer object
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textures[2], 0); 
+    
+    // Set the list of draw buffers.
+    //GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+    //glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
+    
+    
+    // The depth buffer
+    GLuint depthrenderbuffer;
+    glGenRenderbuffers(1, &depthrenderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 3840, 2160);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+    
+    /*
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, 
+        GL_DEPTH_COMPONENT, GL_FLOAT, NULL
+    );
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture, 0);
+        
+    */
+    
+    
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+      printf("\nFail to generate frame buffer\n");
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    gui->gl_ctx.fbo = fbo;
+    gui->gl_ctx.fbo_tex = textures[2];
+    
+/* -------- test frame buffer --- */
+    
 		gui->gl_ctx.tex = textures[1];
 		gui->gl_ctx.tex_uni = glGetUniformLocation(shaderProgram, "tex");
 		
@@ -1807,4 +1861,102 @@ int dxf_ents_draw_gl(dxf_drawing *drawing, struct ogl *gl_ctx, struct draw_param
 			current = current->next;
 		}
 	}
+}
+
+int dxf_draw_framebuffer(struct ogl *gl_ctx, int w, int h){
+  
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  
+		/* prepare for new opengl commands */
+    #ifndef GLES2
+    if (gl_ctx->elems == NULL){
+      gl_ctx->verts = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+      gl_ctx->elems = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+    }
+    #endif
+    //glActiveTexture(GL_TEXTURE2);
+    //glBindTexture(GL_TEXTURE_2D, gl_ctx->fbo_tex);
+		glUniform1i(gl_ctx->tex_uni, 2); /* choose second texture */
+		/* finally draw image */
+		/* convert in3put coordinates, in pixles (int), to openGL units and store vertices - 4 vertices */
+	
+    /* 0 */
+    
+	int j = gl_ctx->vert_count;
+	gl_ctx->verts[j].pos[0] = 0.0;
+	gl_ctx->verts[j].pos[1] = 0.0;
+	gl_ctx->verts[j].pos[2] = 0.0;
+  gl_ctx->verts[j].norm[0] = 0.0;
+  gl_ctx->verts[j].norm[1] = 0.0;
+  gl_ctx->verts[j].norm[2] = 1.0;
+	gl_ctx->verts[j].col[0] = 255;
+	gl_ctx->verts[j].col[1] = 255;
+	gl_ctx->verts[j].col[2] = 255;
+	gl_ctx->verts[j].col[3] = 255;
+	gl_ctx->verts[j].uv[0] = 0.0;
+	gl_ctx->verts[j].uv[1] = 0.0;//(float)(1 - gl_ctx->flip_y) * scale_v;
+	gl_ctx->vert_count ++;
+	/* 1 */
+	j = gl_ctx->vert_count;
+	gl_ctx->verts[j].pos[0] = 0.0;
+	gl_ctx->verts[j].pos[1] = 2160.0;//(float) (y + h);
+	gl_ctx->verts[j].pos[2] = 0.0;
+  gl_ctx->verts[j].norm[0] = 0.0;
+  gl_ctx->verts[j].norm[1] = 0.0;
+  gl_ctx->verts[j].norm[2] = 1.0;
+	gl_ctx->verts[j].col[0] = 255;
+	gl_ctx->verts[j].col[1] = 255;
+	gl_ctx->verts[j].col[2] = 255;
+	gl_ctx->verts[j].col[3] = 255;
+	gl_ctx->verts[j].uv[0] = 0.0;
+	gl_ctx->verts[j].uv[1] = 1.0;//(float)(gl_ctx->flip_y) * scale_v;
+	gl_ctx->vert_count ++;
+	/* 2 */
+	j = gl_ctx->vert_count;
+	gl_ctx->verts[j].pos[0] = 3840.0;//(float) (x + w);
+	gl_ctx->verts[j].pos[1] = 0.0;
+	gl_ctx->verts[j].pos[2] = 0.0;
+  gl_ctx->verts[j].norm[0] = 0.0;
+  gl_ctx->verts[j].norm[1] = 0.0;
+  gl_ctx->verts[j].norm[2] = 1.0;
+	gl_ctx->verts[j].col[0] = 255;
+	gl_ctx->verts[j].col[1] = 255;
+	gl_ctx->verts[j].col[2] = 255;
+	gl_ctx->verts[j].col[3] = 255;
+	gl_ctx->verts[j].uv[0] = 1.0;//scale_u;
+	gl_ctx->verts[j].uv[1] = 0.0;//(float)(1 - gl_ctx->flip_y) * scale_v;
+	gl_ctx->vert_count ++;
+	/* 3 */
+	j = gl_ctx->vert_count;
+	gl_ctx->verts[j].pos[0] = 3840.0;//(float) (x + w);
+	gl_ctx->verts[j].pos[1] = 2160.0;//(float) (y + h);
+	gl_ctx->verts[j].pos[2] = 0.0;
+  gl_ctx->verts[j].norm[0] = 0.0;
+  gl_ctx->verts[j].norm[1] = 0.0;
+  gl_ctx->verts[j].norm[2] = 1.0;
+	gl_ctx->verts[j].col[0] = 255;
+	gl_ctx->verts[j].col[1] = 255;
+	gl_ctx->verts[j].col[2] = 255;
+	gl_ctx->verts[j].col[3] = 255;
+	gl_ctx->verts[j].uv[0] =  1.0;//scale_u;
+	gl_ctx->verts[j].uv[1] = 1.0;//(float)(gl_ctx->flip_y) * scale_v;
+	gl_ctx->vert_count ++;
+	/* store vertex indexes in elements buffer - 2 triangles that share vertices  */
+	/* 0 */
+	j = gl_ctx->elem_count * 3;
+	gl_ctx->elems[j] = gl_ctx->vert_count - 4;
+	gl_ctx->elems[j+1] = gl_ctx->vert_count - 3;
+	gl_ctx->elems[j+2] = gl_ctx->vert_count - 2;
+	/* 1 */
+	gl_ctx->elems[j+3] = gl_ctx->vert_count - 3;
+	gl_ctx->elems[j+4] = gl_ctx->vert_count - 2;
+	gl_ctx->elems[j+5] = gl_ctx->vert_count - 1;
+	gl_ctx->elem_count+= 2;
+	
+	
+  draw_gl (gl_ctx, 1); /* force draw and cleanup */
+  glUniform1i(gl_ctx->tex_uni, 0); /* choose second texture */
+  
+  
+  return 1;
 }
