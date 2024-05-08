@@ -54,6 +54,8 @@ int gui_main_loop (gui_obj *gui) {
   
   static struct do_entry *prev_do = NULL; //gui->list_do.current;
   
+  static dxf_node *curr_ent = NULL;
+  
   static int open_prg = 0;
 	static int progr_win = 0;
 	static int progr_end = 0;
@@ -1481,7 +1483,7 @@ int gui_main_loop (gui_obj *gui) {
     gui->draw = 1;
   }
   
-  if (gui->draw != 0){
+  if (gui->draw != 0 || curr_ent){
     /*get current window size and position*/
     SDL_GetWindowSize(gui->window, &gui->win_w, &gui->win_h);
     SDL_GetWindowPosition (gui->window, &gui->win_x, &gui->win_y);
@@ -1489,9 +1491,13 @@ int gui_main_loop (gui_obj *gui) {
     
     //glUniform1i(gui->gl_ctx.tex_uni, 0);
     
-    SDL_GetWindowSize(gui->window, &gui->gl_ctx.win_w, &gui->gl_ctx.win_h);
+    //SDL_GetWindowSize(gui->window, &gui->gl_ctx.win_w, &gui->gl_ctx.win_h);
     //glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
     
+    d_param.w = gui->win_w;
+    d_param.h = gui->win_h;
+    gui->gl_ctx.win_w = gui->win_w;
+    gui->gl_ctx.win_h = gui->win_h;
     d_param.ofs_x = gui->ofs_x;
     d_param.ofs_y = gui->ofs_y;
     d_param.ofs_z = 0;
@@ -1562,7 +1568,32 @@ int gui_main_loop (gui_obj *gui) {
       gui->gl_ctx.elem_count = 0;
       glUniform1i(gui->gl_ctx.tex_uni, 0);
       
-      dxf_ents_draw_gl(gui->drawing, &gui->gl_ctx, d_param);
+      gui->gl_ctx.timer = 0;
+      SDL_SemPost( gui->timer_sem );
+      
+      curr_ent = dxf_ents_draw_gl(gui->drawing, &gui->gl_ctx, NULL, d_param);
+      
+      draw_gl (&gui->gl_ctx, 1); /* force draw and cleanup */
+    }
+    else if (curr_ent){
+      glBindFramebuffer(GL_FRAMEBUFFER, gui->gl_ctx.fbo);
+      glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
+      
+      
+      #ifndef GLES2
+      if (gui->gl_ctx.elems == NULL){
+        gui->gl_ctx.verts = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        gui->gl_ctx.elems = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+      }
+      #endif
+      gui->gl_ctx.vert_count = 0;
+      gui->gl_ctx.elem_count = 0;
+      glUniform1i(gui->gl_ctx.tex_uni, 0);
+      
+      gui->gl_ctx.timer = 0;
+      SDL_SemPost( gui->timer_sem );
+      
+      curr_ent = dxf_ents_draw_gl(gui->drawing, &gui->gl_ctx, curr_ent, d_param);
       
       draw_gl (&gui->gl_ctx, 1); /* force draw and cleanup */
     }
@@ -1612,7 +1643,7 @@ int gui_main_loop (gui_obj *gui) {
 		gui->gl_ctx.model[2][2] = 1.0;
     
     
-    dxf_draw_framebuffer(&gui->gl_ctx, gui->gl_ctx.win_w, gui->gl_ctx.win_h); //-----------
+    dxf_draw_framebuffer(&gui->gl_ctx); //-----------
     
     glUniform1i(gui->gl_ctx.tex_uni, 0);
     

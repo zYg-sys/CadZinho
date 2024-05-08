@@ -33,6 +33,19 @@ void sel_list_clear (gui_obj *gui){
 	list_mem_pool(ZERO_LIST, SEL_LIFE);
 }
 
+int gui_timer_thread(void* data){
+  gui_obj *gui = (gui_obj *) data;
+  int delay;
+  while (gui->running){
+    //Lock
+    SDL_SemWait( gui->timer_sem );
+    delay = gui->delay - 2;
+    delay = (delay > 0) ? delay : 1;
+    SDL_Delay(gui->delay);
+    gui->gl_ctx.timer = 1;
+  }
+}
+
 /* ***********************************************************
 the fowling functions are for rendering text in gui, by rastering each
 glyphs in a monochrome image in memory. */
@@ -1974,6 +1987,11 @@ int gui_start(gui_obj *gui){
   
   gui->grid_flags = 0;
   gui->grid_spc = 20.0;
+  
+  gui->gl_ctx.timer = 0;
+  gui->timer_sem = SDL_CreateSemaphore( 0 );
+  gui->timer_thread_id = SDL_CreateThread( gui_timer_thread,
+              "gui_timer_thread", (void*)gui );
 	
 	memset(gui->blank_tex, 0, 4*20*600);
 	

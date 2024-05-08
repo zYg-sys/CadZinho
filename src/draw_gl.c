@@ -250,7 +250,6 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     gui->gl_ctx.fbo = fbo;
-    gui->gl_ctx.fbo_tex = textures[2];
     
 /* -------- test frame buffer --- */
     
@@ -1839,31 +1838,36 @@ int dxf_list_draw_gl(list_node *list, struct ogl *gl_ctx,  struct draw_param par
 	}
 }
 
-int dxf_ents_draw_gl(dxf_drawing *drawing, struct ogl *gl_ctx, struct draw_param param){
-	dxf_node *current = NULL;
+dxf_node * dxf_ents_draw_gl(dxf_drawing *drawing, struct ogl *gl_ctx, dxf_node *current, struct draw_param param){
+	//dxf_node *current = NULL;
 	//int lay_idx = 0;
+  if (!drawing) return NULL;
+	if (!drawing->ents) return NULL;
+  if (!drawing->main_struct) return NULL;
 		
-	if ((drawing->ents != NULL) && (drawing->main_struct != NULL)){
-		current = drawing->ents->obj.content->next;
+  if (!current) current = drawing->ents->obj.content->next;
 		
-		/* starts the content sweep  */
-		while (current != NULL){
-			if (current->type == DXF_ENT){ /* DXF entity */
-				/*verify if entity layer is on and thaw */
-				if ((!drawing->layers[current->obj.layer].off) && 
-					(!drawing->layers[current->obj.layer].frozen)){
-					
-					/* draw each entity */
-					graph_list_draw_gl2(current->obj.graphics, gl_ctx, param);
-					
-				}
-			}
-			current = current->next;
-		}
-	}
+  /* starts the content sweep  */
+  while (current != NULL && !gl_ctx->timer){
+    if (current->type == DXF_ENT){ /* DXF entity */
+      /*verify if entity layer is on and thaw */
+      if ((!drawing->layers[current->obj.layer].off) && 
+        (!drawing->layers[current->obj.layer].frozen)){
+        
+        /* draw each entity */
+        graph_list_draw_gl2(current->obj.graphics, gl_ctx, param);
+        
+      }
+    }
+    current = current->next;
+  }
+    
+  //if (gl_ctx->timer) { printf ("\nDraw too long\n");}
+  return current;
+	
 }
 
-int dxf_draw_framebuffer(struct ogl *gl_ctx, int w, int h){
+int dxf_draw_framebuffer(struct ogl *gl_ctx){
   
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
   

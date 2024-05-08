@@ -672,6 +672,10 @@ int main(int argc, char** argv){
   SDL_WaitThread(gui->debug_thread_id, NULL);
   
   SDLNet_Quit();
+  
+  SDL_SemPost( gui->timer_sem );
+  SDL_WaitThread(gui->timer_thread_id, NULL);
+  SDL_DestroySemaphore( gui->timer_sem );
 	
 	/* safe quit */
   
