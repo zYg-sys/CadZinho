@@ -1496,12 +1496,6 @@ int gui_main_loop (gui_obj *gui) {
   
   if (gui->draw != 0 || curr_ent){
     
-    
-    //glUniform1i(gui->gl_ctx.tex_uni, 0);
-    
-    //SDL_GetWindowSize(gui->window, &gui->gl_ctx.win_w, &gui->gl_ctx.win_h);
-    //glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
-    
     d_param.w = gui->win_w;
     d_param.h = gui->win_h;
     gui->gl_ctx.win_w = gui->win_w;
@@ -1556,15 +1550,15 @@ int gui_main_loop (gui_obj *gui) {
     glDepthFunc(GL_LEQUAL);
     
     
-    /* --------------------*/
+    /* ---------Render drawing in frame buffer ----------*/
     if (prev_ofs_x != gui->ofs_x || prev_ofs_y != gui->ofs_y ||
       prev_zoom != gui->zoom || prev_do != gui->list_do.current ||
       gui->draw == 2)
-    {
+    { /* check if render is needed */
       glBindFramebuffer(GL_FRAMEBUFFER, gui->gl_ctx.fbo);
       glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
       
-      /* Clear the screen to background color */
+      /* Clear the screen to transparent color */
       glClearColor(1.0, 1.0, 1.0, 0.0);
       glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
       #ifndef GLES2
@@ -1584,7 +1578,7 @@ int gui_main_loop (gui_obj *gui) {
       
       draw_gl (&gui->gl_ctx, 1); /* force draw and cleanup */
     }
-    else if (curr_ent){
+    else if (curr_ent){  /* check if render is needed - pending entities */
       glBindFramebuffer(GL_FRAMEBUFFER, gui->gl_ctx.fbo);
       glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
       
@@ -1609,7 +1603,7 @@ int gui_main_loop (gui_obj *gui) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
     
-    /*------------*/
+    /*------Draw frame buffer------*/
     
     /* Clear the screen to background color */
     glClearColor((GLfloat) gui->background.r/255, (GLfloat) gui->background.g/255, 
@@ -1690,16 +1684,11 @@ int gui_main_loop (gui_obj *gui) {
     if (gui->grid_flags) draw_grid_gl(gui);
     draw_orign_gl(gui);
     
-    //dxf_ents_draw_gl(gui->drawing, &gui->gl_ctx, d_param);
-    
     if (!gui->pan_mode) 
       draw_cursor_gl(gui, gui->mouse_x, gui->mouse_y, gui->cursor);
     
     draw_gl (&gui->gl_ctx, 1); /* force draw and cleanup */
     //glReadPixels(gui->mouse_x, gui->mouse_y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &gui->mouse_z);
-    
-    
-    
     
     /*hilite test */
     if((gui->draw_tmp)&&(gui->element != NULL)){
