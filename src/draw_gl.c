@@ -240,7 +240,7 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
     //glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
     
     
-    // The depth buffer
+    /* The depth buffer
     GLuint depthrenderbuffer;
     glGenRenderbuffers(1, &depthrenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
