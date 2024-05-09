@@ -2,6 +2,13 @@
  #include "gui.h"
 
 #define TOLERANCE 1e-6
+#ifdef __EMSCRIPTEN__
+  #define MAX_RESOL_X 1024
+  #define MAX_RESOL_Y 768
+#else
+  #define MAX_RESOL_X 3840
+  #define MAX_RESOL_Y 2160
+#endif
 
 /* mantain one unique element in a sorted array - array of integer values */
 static int unique (int n, int * a) {
@@ -203,6 +210,12 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gui->gl_ctx.tex_w, gui->gl_ctx.tex_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 /* -------- test frame buffer --- */
+    glGetIntegerv(GL_MAX_VIEWPORT_DIMS, &gui->gl_ctx.fb_dims[0]);
+    printf("\nout size = %d, %d\n", gui->gl_ctx.fb_dims[0], gui->gl_ctx.fb_dims[1]);
+    
+    gui->gl_ctx.fb_dims[0] = (gui->gl_ctx.fb_dims[0] < MAX_RESOL_X) ? gui->gl_ctx.fb_dims[0] : MAX_RESOL_X;
+    gui->gl_ctx.fb_dims[1] = (gui->gl_ctx.fb_dims[1] < MAX_RESOL_Y) ? gui->gl_ctx.fb_dims[1] : MAX_RESOL_Y;
+    
     GLuint fbo = 0;
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -217,7 +230,7 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 3840, 2160, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gui->gl_ctx.fb_dims[0], gui->gl_ctx.fb_dims[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     
     // attach it to currently bound framebuffer object
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textures[2], 0); 
@@ -231,7 +244,7 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
     GLuint depthrenderbuffer;
     glGenRenderbuffers(1, &depthrenderbuffer);
     glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 3840, 2160);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gui->gl_ctx.fb_dims[0], gui->gl_ctx.fb_dims[1]);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
     
     /*
@@ -1903,7 +1916,7 @@ int dxf_draw_framebuffer(struct ogl *gl_ctx){
 	/* 1 */
 	j = gl_ctx->vert_count;
 	gl_ctx->verts[j].pos[0] = 0.0;
-	gl_ctx->verts[j].pos[1] = 2160.0;//(float) (y + h);
+	gl_ctx->verts[j].pos[1] = (float) gl_ctx->fb_dims[1];//(float) (y + h);
 	gl_ctx->verts[j].pos[2] = 0.0;
   gl_ctx->verts[j].norm[0] = 0.0;
   gl_ctx->verts[j].norm[1] = 0.0;
@@ -1917,7 +1930,7 @@ int dxf_draw_framebuffer(struct ogl *gl_ctx){
 	gl_ctx->vert_count ++;
 	/* 2 */
 	j = gl_ctx->vert_count;
-	gl_ctx->verts[j].pos[0] = 3840.0;//(float) (x + w);
+	gl_ctx->verts[j].pos[0] = (float) gl_ctx->fb_dims[0];//(float) (x + w);
 	gl_ctx->verts[j].pos[1] = 0.0;
 	gl_ctx->verts[j].pos[2] = 0.0;
   gl_ctx->verts[j].norm[0] = 0.0;
@@ -1932,8 +1945,8 @@ int dxf_draw_framebuffer(struct ogl *gl_ctx){
 	gl_ctx->vert_count ++;
 	/* 3 */
 	j = gl_ctx->vert_count;
-	gl_ctx->verts[j].pos[0] = 3840.0;//(float) (x + w);
-	gl_ctx->verts[j].pos[1] = 2160.0;//(float) (y + h);
+	gl_ctx->verts[j].pos[0] = (float) gl_ctx->fb_dims[0];//(float) (x + w);
+	gl_ctx->verts[j].pos[1] = (float) gl_ctx->fb_dims[1];//(float) (y + h);
 	gl_ctx->verts[j].pos[2] = 0.0;
   gl_ctx->verts[j].norm[0] = 0.0;
   gl_ctx->verts[j].norm[1] = 0.0;

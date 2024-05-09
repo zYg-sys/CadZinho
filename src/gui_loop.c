@@ -51,6 +51,7 @@ int gui_main_loop (gui_obj *gui) {
   static int update_title = 0, changed = 0, framebuf = 1;
   
   static double prev_ofs_x, prev_ofs_y, prev_zoom;
+  static float prev_model_view[3][3];
   
   static struct do_entry *prev_do = NULL; //gui->list_do.current;
   
@@ -436,12 +437,19 @@ int gui_main_loop (gui_obj *gui) {
           }
           break;
         case SDL_WINDOWEVENT:
-          if (event.window.event == SDL_WINDOWEVENT_RESIZED){
-            gui->draw = 1;
-          }
-          if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED){
-            gui->draw = 1;
-          }
+          //if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
+          //    event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+          //{
+          /*get current window size and position*/
+          SDL_GetWindowSize(gui->window, &gui->win_w, &gui->win_h);
+          SDL_GetWindowPosition (gui->window, &gui->win_x, &gui->win_y);
+          gui->win_w = (gui->win_w < gui->gl_ctx.fb_dims[0]) ? gui->win_w : gui->gl_ctx.fb_dims[0];
+          gui->win_h = (gui->win_h < gui->gl_ctx.fb_dims[1]) ? gui->win_h : gui->gl_ctx.fb_dims[1];
+          SDL_SetWindowSize(gui->window, gui->win_w, gui->win_h);
+          
+    
+          gui->draw = 1;
+          //}
           break;
         case SDL_DISPLAYEVENT:
         {
@@ -1087,7 +1095,7 @@ int gui_main_loop (gui_obj *gui) {
     
     dxf_ents_parse(gui->drawing);
     
-    gui->draw = 1;
+    gui->draw = 2;
   }
   else if((gui->action == YANK || gui->action == CUT) && strlen(gui->clip_path) > 0) {
     if (gui->sel_list->next){ /* verify if  has elements in list */
@@ -1266,7 +1274,7 @@ int gui_main_loop (gui_obj *gui) {
         current = current->next;
       }
     }
-    gui->draw = 1;
+    gui->draw = 2;
   }
   
   else if(gui->action == COLOR_CHANGE){
@@ -1296,7 +1304,7 @@ int gui_main_loop (gui_obj *gui) {
         current = current->next;
       }
     }
-    gui->draw = 1;
+    gui->draw = 2;
   }
   else if(gui->action == LTYPE_CHANGE){
     gui->action = NONE;
@@ -1326,7 +1334,7 @@ int gui_main_loop (gui_obj *gui) {
         current = current->next;
       }
     }
-    gui->draw = 1;
+    gui->draw = 2;
   }
   else if(gui->action == LW_CHANGE){
     gui->action = NONE;
@@ -1355,7 +1363,7 @@ int gui_main_loop (gui_obj *gui) {
         current = current->next;
       }
     }
-    gui->draw = 1;
+    gui->draw = 2;
   }
   
   /**********************************/
@@ -1479,14 +1487,14 @@ int gui_main_loop (gui_obj *gui) {
     file_path_len = strlen(file_path);
   }
   
-  if (gui_check_draw(gui) != 0){
+  if (gui_check_draw(gui) != 0 && gui->draw == 0){
     gui->draw = 1;
+  }
+  if(memcmp(prev_model_view, gui->model_view, sizeof(prev_model_view))){
+    gui->draw = 2;
   }
   
   if (gui->draw != 0 || curr_ent){
-    /*get current window size and position*/
-    SDL_GetWindowSize(gui->window, &gui->win_w, &gui->win_h);
-    SDL_GetWindowPosition (gui->window, &gui->win_x, &gui->win_y);
     
     
     //glUniform1i(gui->gl_ctx.tex_uni, 0);
@@ -1550,7 +1558,8 @@ int gui_main_loop (gui_obj *gui) {
     
     /* --------------------*/
     if (prev_ofs_x != gui->ofs_x || prev_ofs_y != gui->ofs_y ||
-      prev_zoom != gui->zoom || prev_do != gui->list_do.current)
+      prev_zoom != gui->zoom || prev_do != gui->list_do.current ||
+      gui->draw == 2)
     {
       glBindFramebuffer(GL_FRAMEBUFFER, gui->gl_ctx.fbo);
       glViewport(0, 0, gui->gl_ctx.win_w, gui->gl_ctx.win_h);
@@ -1806,6 +1815,7 @@ int gui_main_loop (gui_obj *gui) {
   prev_ofs_y = gui->ofs_y;
   prev_zoom = gui->zoom;
   prev_do = gui->list_do.current;
+  memcpy(prev_model_view, gui->model_view, sizeof(prev_model_view));
   
   return gui->running;
 }

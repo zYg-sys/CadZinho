@@ -351,7 +351,7 @@ int main(int argc, char** argv){
 	/* ------------------------------ opengl --------------------------------------*/
 	gui->gl_ctx.ctx = SDL_GL_CreateContext(gui->window);
 #endif
-
+  
 	draw_gl_init ((void *)gui, 0);
 	
 	/* ------------------------------------------------------------------------------- */

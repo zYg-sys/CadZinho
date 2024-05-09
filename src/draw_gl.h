@@ -66,6 +66,7 @@ struct ogl { /* openGL context to pass main parameters */
   GLfloat model[3][3];
   
   GLuint fbo;
+  GLuint fb_dims[2];
   
   int timer;
 
