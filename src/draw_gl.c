@@ -1275,6 +1275,16 @@ int graph_draw_gl(graph_obj * master, struct ogl *gl_ctx, struct draw_param para
 	
 	/* verify if current graph is inside window*/
 	/*
+  x0 = xd0 * gl_ctx->transf[0][0] + yd0 * gl_ctx->transf[1][0] + zd0 * gl_ctx->transf[2][0] + gl_ctx->transf[3][0];
+  y0 = xd0 * gl_ctx->transf[0][1] + yd0 * gl_ctx->transf[1][1] + zd0 * gl_ctx->transf[2][1] + gl_ctx->transf[3][1];
+  z0 = xd0 * gl_ctx->transf[0][2] + yd0 * gl_ctx->transf[1][2] + zd0 * gl_ctx->transf[2][2] + gl_ctx->transf[3][2];
+  x1 = xd1 * gl_ctx->transf[0][0] + yd1 * gl_ctx->transf[1][0] + zd1 * gl_ctx->transf[2][0] + gl_ctx->transf[3][0];
+  y1 = xd1 * gl_ctx->transf[0][1] + yd1 * gl_ctx->transf[1][1] + zd1 * gl_ctx->transf[2][1] + gl_ctx->transf[3][1];
+  z1 = xd1 * gl_ctx->transf[0][2] + yd1 * gl_ctx->transf[1][2] + zd1 * gl_ctx->transf[2][2] + gl_ctx->transf[3][2];
+  
+  printf("corners = %.2f,%.2f,%.2f - %.2f,%.2f,%.2f\n", x0, y0, z0, x1, y1, z1);
+  */
+  /*
 	if ( (xd0 < 0 && xd1 < 0) || 
 		(xd0 > gl_ctx->win_w && xd1 > gl_ctx->win_w) || 
 		(yd0 < 0 && yd1 < 0) || 

@@ -8229,3 +8229,297 @@ int script_do_changes (lua_State *L) {
  
 	return 1;
 }
+
+/* get drawing head variable */
+/* given parameters:
+	- Variable name, as string
+returns:
+	- variable value, or nil if fails
+*/
+int script_get_head_var (lua_State *L) {
+	/* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as  "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	
+	/* verify passed arguments */
+	int n = lua_gettop(L);    /* number of arguments */
+	if (n < 1){
+		lua_pushliteral(L, "get_head_vart: invalid number of arguments");
+		lua_error(L);
+	}
+	if (!lua_isstring(L, 1)) {
+		lua_pushliteral(L, "get_head_vart: incorrect argument type");
+		lua_error(L);
+	}
+	
+	char name [DXF_MAX_CHARS + 1];
+	
+	strncpy(name, lua_tostring(L, 1), DXF_MAX_CHARS); /* preserve original string */
+	str_upp(name); /*upper case */
+	
+  /* look for header variable */
+  dxf_node *start = NULL, *end = NULL;
+  if(dxf_find_head_var(gui->drawing->head, name, &start, &end)){
+    /* variable exists */
+    if (start){
+			if (start->type == DXF_ATTR){
+				/* identify the type of attrib, according DXF group specification */
+				int type = dxf_ident_attr_type(start->value.group);
+				if (type == DXF_FLOAT){
+          lua_pushnumber(L, start->value.d_data);
+          return 1;
+        }
+        else if (type == DXF_INT){
+          lua_pushinteger(L, start->value.i_data);
+          return 1;
+        }
+				else if (type == DXF_STR){
+          if (start->value.group == 2 || (start->value.group > 5 && start->value.group < 9) ){
+            lua_pushstring(L, strpool_cstr2( &name_pool, start->value.str));
+          } else {
+            lua_pushstring(L, strpool_cstr2( &value_pool, start->value.str));
+          }
+          return 1;
+        }
+			}
+		}
+  }
+  
+  lua_pushnil(L); /* fail to get variable */
+	return 1;
+}
+
+/* get a named data of an dictionary */
+/* given parameters:
+	- name of data, as string
+	- name of owner dictionary, as string
+returns:
+	- table with data
+*/
+int script_get_dict (lua_State *L) {
+	/* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as  "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	/* verify passed arguments */
+	int n = lua_gettop(L);    /* number of arguments */
+	if (n < 1){
+		lua_pushliteral(L, "get_dict: invalid number of arguments");
+		lua_error(L);
+	}
+	if (!lua_isstring(L, 1)) {
+		lua_pushliteral(L, "get_dict: incorrect argument type");
+		lua_error(L);
+	}
+	
+  lua_newtable(L); /* table to store data */
+  
+  dxf_node * owner = NULL; /* default owner is main dictionary */
+  
+  if (!lua_isstring(L, 2)) { /* Owner dictionary */
+    /* try to find owner in main dictionary */
+    owner = dxf_find_dict(gui->drawing, NULL, (char*)lua_tostring(L, 2));
+    if (!owner) return 1; /* fail */
+  }
+  
+  /* try to find data obj in owner dictionary */
+  dxf_node * data = dxf_find_dict(gui->drawing, owner, (char*)lua_tostring(L, 1));
+  if (!data) return 1; /* fail */
+  
+  
+  STRPOOL_U64 xrec = strpool_inject(&obj_pool, "XRECORD", 7);
+	STRPOOL_U64 dvar = strpool_inject(&obj_pool, "DICTIONARYVAR", 13);
+	
+	if (data->obj.id == dvar){ /* data is a DICTIONARYVAR */
+    data = dxf_find_attr2(data, 1);
+    if (data){
+      lua_newtable(L); /* table to store data */
+      lua_pushstring(L, "group");
+      lua_pushinteger(L, 1);
+      lua_rawset(L, -3); /* store in table */
+      
+      lua_pushstring(L, "value");
+      lua_pushstring(L, strpool_cstr2( &value_pool, data->value.str));
+      lua_rawset(L, -3); /* store in table */
+      
+      lua_rawseti(L, -2, 1);  /* store to main table */
+    }
+  }
+  else if (data->obj.id == xrec){ /* data is a XRECORD */
+    data = dxf_find_attr2(data, 281);
+    if (data) data = data->next;
+    int num_data = 0, type;
+    while (data){
+      if (data->type == DXF_ATTR){
+        lua_newtable(L); /* table to store data */
+        lua_pushstring(L, "group");
+        lua_pushinteger(L, data->value.group);
+        lua_rawset(L, -3); /* store in table */
+        
+        lua_pushstring(L, "value");
+        /* identify the type of attrib, according DXF group specification */
+				type = dxf_ident_attr_type(data->value.group);
+				switch(type) {
+					/* change the data */
+					case DXF_FLOAT :
+						lua_pushnumber(L, data->value.d_data);
+						break;
+					case DXF_INT :
+						lua_pushinteger(L, data->value.i_data);
+						break;
+					case DXF_STR :
+            if (data->value.group == 2 || (data->value.group > 5 && data->value.group < 9) ){
+              lua_pushstring(L, strpool_cstr2( &name_pool, data->value.str));
+            } else {
+              lua_pushstring(L, strpool_cstr2( &value_pool, data->value.str));
+            }
+				}
+        lua_rawset(L, -3); /* store in table */
+        num_data++;
+        lua_rawseti(L, -2, num_data);  /* store to main table */
+      }
+      else break; /* breaks if is found a entity */
+      data = data->next;
+    }
+  }
+  else { /* not supported data object */
+    return 1;
+  }
+	
+	
+	return 1;
+}
+
+/* new DICTIONARY to the drawing */
+/* given parameters:
+	- dict name, as string
+returns:
+	- success, as boolean
+*/
+int script_new_dict (lua_State *L) {
+	/* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as  "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	/* verify passed arguments */
+	if (!lua_isstring(L, 1)) {
+		lua_pushliteral(L, "new_dict: incorrect argument type");
+		lua_error(L);
+	}
+	
+	char dict [DXF_MAX_CHARS + 1];
+	
+	strncpy(dict, lua_tostring(L, 1), DXF_MAX_CHARS); /* preserve original string */
+	//str_upp(dict); /*upper case */
+	
+	char *new_str;
+	new_str = trimwhitespace(dict);
+	/* verify if  dict name contain spaces */
+	if (strchr(new_str, ' ')){
+		lua_pushliteral(L, "new_dict: No spaces allowed in dict");
+		lua_error(L);
+	}
+	
+	/* check if exists an dict with same name */
+  if (dxf_find_dict(gui->drawing, NULL, new_str)){
+    lua_pushboolean(L, 1); /* return success */
+    return 1;
+  }
+  
+  if (dxf_new_dict (gui->drawing, NULL, new_str)){
+    lua_pushboolean(L, 1); /* return success */
+    return 1;
+  }
+  
+	
+	lua_pushboolean(L, 0); /* return fail */
+	return 1;
+}
+
+/* new DICTIONARYVAR to the drawing */
+/* given parameters:
+	- dict name, as string
+  - key, as string
+  - value, as string
+returns:
+	- success, as boolean
+*/
+int script_new_dict_var (lua_State *L) {
+	/* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as  "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
+	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	/* verify passed arguments */
+	int n = lua_gettop(L);    /* number of arguments */
+	if (n < 3){
+		lua_pushliteral(L, "new_dict_var: invalid number of arguments");
+		lua_error(L);
+	}
+	if (!lua_isstring(L, 1)) {
+		lua_pushliteral(L, "new_dict_var: incorrect argument type");
+		lua_error(L);
+	}
+  if (!lua_isstring(L, 2)) {
+		lua_pushliteral(L, "new_dict_var: incorrect argument type");
+		lua_error(L);
+	}
+  if (!lua_isstring(L, 3)) {
+		lua_pushliteral(L, "new_dict_var: incorrect argument type");
+		lua_error(L);
+	}
+	
+	/* check if dict exists */
+  dxf_node * owner;
+  if (owner = dxf_find_dict(gui->drawing, NULL, (char*)lua_tostring(L, 1))){
+    lua_pushboolean(L, 0); /* return fail */
+    return 1;
+  }
+  
+  /* check if exists an dict with same name */
+  if (dxf_find_dict(gui->drawing, owner, (char*)lua_tostring(L, 2))){
+    lua_pushboolean(L, 0); /* return fail */
+    return 1;
+  }
+  
+  if (dxf_new_dict_var (gui->drawing, owner, (char*)lua_tostring(L, 2), (char*)lua_tostring(L, 3))){
+    lua_pushboolean(L, 1); /* return success */
+    return 1;
+  }
+  
+	
+	lua_pushboolean(L, 0); /* return fail */
+	return 1;
+}

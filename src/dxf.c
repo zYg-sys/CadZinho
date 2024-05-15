@@ -2876,6 +2876,8 @@ dxf_node * dxf_find_dict(dxf_drawing *drawing, dxf_node * owner, char *name){
   if (!drawing->objs)
     return NULL; /* error -  not drawing */
   if (!owner) 
+		owner = drawing->main_dict; /* try to use main dictionary as owner */
+  if (!owner) 
 		return NULL; /* error -  not owner */
   if (owner->type != DXF_ENT)
     return NULL; /* error -  not owner */
