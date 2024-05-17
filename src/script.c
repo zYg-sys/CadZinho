@@ -8270,23 +8270,23 @@ int script_get_head_var (lua_State *L) {
   dxf_node *start = NULL, *end = NULL;
   if(dxf_find_head_var(gui->drawing->head, name, &start, &end)){
     /* variable exists */
-    if (start){
-			if (start->type == DXF_ATTR){
+    if (end){
+			if (end->type == DXF_ATTR){
 				/* identify the type of attrib, according DXF group specification */
-				int type = dxf_ident_attr_type(start->value.group);
+				int type = dxf_ident_attr_type(end->value.group);
 				if (type == DXF_FLOAT){
-          lua_pushnumber(L, start->value.d_data);
+          lua_pushnumber(L, end->value.d_data);
           return 1;
         }
         else if (type == DXF_INT){
-          lua_pushinteger(L, start->value.i_data);
+          lua_pushinteger(L, end->value.i_data);
           return 1;
         }
 				else if (type == DXF_STR){
-          if (start->value.group == 2 || (start->value.group > 5 && start->value.group < 9) ){
-            lua_pushstring(L, strpool_cstr2( &name_pool, start->value.str));
+          if (end->value.group == 2 || (end->value.group > 5 && end->value.group < 9) ){
+            lua_pushstring(L, strpool_cstr2( &name_pool, end->value.str));
           } else {
-            lua_pushstring(L, strpool_cstr2( &value_pool, start->value.str));
+            lua_pushstring(L, strpool_cstr2( &value_pool, end->value.str));
           }
           return 1;
         }
@@ -8333,7 +8333,7 @@ int script_get_dict (lua_State *L) {
   
   dxf_node * owner = NULL; /* default owner is main dictionary */
   
-  if (!lua_isstring(L, 2)) { /* Owner dictionary */
+  if (lua_isstring(L, 2)) { /* Owner dictionary */
     /* try to find owner in main dictionary */
     owner = dxf_find_dict(gui->drawing, NULL, (char*)lua_tostring(L, 2));
     if (!owner) return 1; /* fail */
@@ -8407,13 +8407,13 @@ int script_get_dict (lua_State *L) {
 	return 1;
 }
 
-/* new DICTIONARY to the drawing */
+/* set DICTIONARY to the drawing */
 /* given parameters:
 	- dict name, as string
 returns:
 	- success, as boolean
 */
-int script_new_dict (lua_State *L) {
+int script_set_dict (lua_State *L) {
 	/* get gui object from Lua instance */
 	lua_pushstring(L, "cz_gui"); /* is indexed as  "cz_gui" */
 	lua_gettable(L, LUA_REGISTRYINDEX); 
@@ -8428,7 +8428,7 @@ int script_new_dict (lua_State *L) {
 	
 	/* verify passed arguments */
 	if (!lua_isstring(L, 1)) {
-		lua_pushliteral(L, "new_dict: incorrect argument type");
+		lua_pushliteral(L, "set_dict: incorrect argument type");
 		lua_error(L);
 	}
 	
@@ -8461,7 +8461,7 @@ int script_new_dict (lua_State *L) {
 	return 1;
 }
 
-/* new DICTIONARYVAR to the drawing */
+/* set a DICTIONARYVAR to the drawing (create or change value) */
 /* given parameters:
 	- dict name, as string
   - key, as string
@@ -8469,7 +8469,7 @@ int script_new_dict (lua_State *L) {
 returns:
 	- success, as boolean
 */
-int script_new_dict_var (lua_State *L) {
+int script_set_dict_var (lua_State *L) {
 	/* get gui object from Lua instance */
 	lua_pushstring(L, "cz_gui"); /* is indexed as  "cz_gui" */
 	lua_gettable(L, LUA_REGISTRYINDEX); 
@@ -8485,41 +8485,212 @@ int script_new_dict_var (lua_State *L) {
 	/* verify passed arguments */
 	int n = lua_gettop(L);    /* number of arguments */
 	if (n < 3){
-		lua_pushliteral(L, "new_dict_var: invalid number of arguments");
+		lua_pushliteral(L, "set_dict_var: invalid number of arguments");
 		lua_error(L);
 	}
 	if (!lua_isstring(L, 1)) {
-		lua_pushliteral(L, "new_dict_var: incorrect argument type");
+		lua_pushliteral(L, "set_dict_var: incorrect argument type");
 		lua_error(L);
 	}
   if (!lua_isstring(L, 2)) {
-		lua_pushliteral(L, "new_dict_var: incorrect argument type");
+		lua_pushliteral(L, "set_dict_var: incorrect argument type");
 		lua_error(L);
 	}
   if (!lua_isstring(L, 3)) {
-		lua_pushliteral(L, "new_dict_var: incorrect argument type");
+		lua_pushliteral(L, "set_dict_var: incorrect argument type");
 		lua_error(L);
 	}
 	
 	/* check if dict exists */
-  dxf_node * owner;
-  if (owner = dxf_find_dict(gui->drawing, NULL, (char*)lua_tostring(L, 1))){
+  dxf_node * owner, * data;
+  if (!(owner = dxf_find_dict(gui->drawing, NULL, (char*)lua_tostring(L, 1)))){
     lua_pushboolean(L, 0); /* return fail */
     return 1;
   }
   
-  /* check if exists an dict with same name */
-  if (dxf_find_dict(gui->drawing, owner, (char*)lua_tostring(L, 2))){
-    lua_pushboolean(L, 0); /* return fail */
-    return 1;
+  /* check if already exists */
+  if (data = dxf_find_dict(gui->drawing, owner, (char*)lua_tostring(L, 2))){
+    STRPOOL_U64 dvar = strpool_inject(&obj_pool, "DICTIONARYVAR", 13);
+    if (data->obj.id == dvar){ /* check if a DICTIONARYVAR */
+      data = dxf_find_attr2(data, 1);
+      if (data){
+        size_t len;
+        const char * txt = lua_tolstring(L, 3, &len);
+        STRPOOL_U64 value = strpool_inject(&value_pool, txt, len);
+        data->value.str = value;
+        lua_pushboolean(L, 1); /* return success */
+        return 1;
+      }
+    }
   }
   
-  if (dxf_new_dict_var (gui->drawing, owner, (char*)lua_tostring(L, 2), (char*)lua_tostring(L, 3))){
+  /* create a new one */
+  else if (dxf_new_dict_var (gui->drawing, owner, (char*)lua_tostring(L, 2),
+      (char*)lua_tostring(L, 3))){
     lua_pushboolean(L, 1); /* return success */
     return 1;
   }
   
+	lua_pushboolean(L, 0); /* return fail */
+	return 1;
+}
+
+/* set a XRECORD to the drawing (create or change) */
+/* given parameters:
+	- dict name, as string
+  - key, as string
+  - data values, as table (elements in table are tables too,
+		with "group" and "value" labeled DXF pairs)
+returns:
+	- success, as boolean
+*/
+int script_set_xrec (lua_State *L) {
+	/* get gui object from Lua instance */
+	lua_pushstring(L, "cz_gui"); /* is indexed as  "cz_gui" */
+	lua_gettable(L, LUA_REGISTRYINDEX); 
+	gui_obj *gui = lua_touserdata (L, -1);
+	lua_pop(L, 1);
 	
+	/* verify if gui is valid */
+	if (!gui){
+		lua_pushliteral(L, "Auto check: no access to CadZinho enviroment");
+		lua_error(L);
+	}
+	
+	/* verify passed arguments */
+	int n = lua_gettop(L);    /* number of arguments */
+	if (n < 3){
+		lua_pushliteral(L, "set_dict_var: invalid number of arguments");
+		lua_error(L);
+	}
+	if (!lua_isstring(L, 1)) {
+		lua_pushliteral(L, "set_dict_var: incorrect argument type");
+		lua_error(L);
+	}
+  if (!lua_isstring(L, 2)) {
+		lua_pushliteral(L, "set_dict_var: incorrect argument type");
+		lua_error(L);
+	}
+  if (!lua_istable(L, 3)) {
+		lua_pushliteral(L, "set_dict_var: incorrect argument type");
+		lua_error(L);
+	}
+	
+	/* check if dict exists */
+  dxf_node * owner, * data;
+  if (!(owner = dxf_find_dict(gui->drawing, NULL, (char*)lua_tostring(L, 1)))){
+    lua_pushboolean(L, 0); /* return fail */
+    return 1;
+  }
+  
+  /* check if already exists */
+  if (data = dxf_find_dict(gui->drawing, owner, (char*)lua_tostring(L, 2))){
+    STRPOOL_U64 xrec = strpool_inject(&obj_pool, "XRECORD", 7);
+    if (data->obj.id == xrec){ /* check if a XRECORD */
+      /* clear previous data */
+      dxf_node *current = NULL;
+      current = dxf_find_attr2(data, 281);
+      if (current) current = current->next;
+      while (current){
+        if (current->type == DXF_ATTR){
+          dxf_obj_subst(current, NULL); /* remove data*/
+        }
+        /* breaks if is found a entity */
+        else break;
+        current = current->next;
+      }
+      
+      int group, type, val_i;
+      double val_d;
+
+      /* iterate over table */
+      lua_pushnil(L);  /* first key */
+      while (lua_next(L, 3) != 0) {
+        /* uses 'key' (at index -2) and 'value' (at index -1) */
+        if (lua_istable(L, -1)){
+          /* get vertex coordinates */
+          lua_getfield(L, -1, "group");
+          group = lua_tonumber(L, -1);
+          lua_pop(L, 1);
+          lua_getfield(L, -1, "value");
+          //value = lua_tonumber(L, -1);
+          /* identify the type of attrib, according DXF group specification */
+          type = dxf_ident_attr_type(group);
+          switch(type) {
+            /* change the data */
+            case DXF_FLOAT :
+              val_d = lua_tonumber(L, -1);
+              dxf_xrecord_append (data, group, (void*)&val_d,
+                gui->drawing->pool);
+              break;
+            case DXF_INT :
+              val_i = lua_tonumber(L, -1);
+              dxf_xrecord_append (data, group, (void*)&val_i,
+                gui->drawing->pool);
+              break;
+            case DXF_STR :
+              dxf_xrecord_append (data, group, (void*)lua_tostring(L, -1),
+          gui->drawing->pool);
+          }
+          lua_pop(L, 1);
+        }
+        /* removes 'value'; keeps 'key' for next iteration */
+        lua_pop(L, 1);
+      }
+      
+      
+      lua_pushboolean(L, 1); /* return success */
+      return 1;
+      
+    }
+  }
+  
+  /* create a new one */
+  else if (data = dxf_new_xrecord (gui->drawing, owner, 
+      (char*)lua_tostring(L, 2)))
+  {
+    int group, type, val_i;
+    double val_d;
+
+    /* iterate over table */
+    lua_pushnil(L);  /* first key */
+    while (lua_next(L, 3) != 0) {
+      /* uses 'key' (at index -2) and 'value' (at index -1) */
+      if (lua_istable(L, -1)){
+        /* get vertex coordinates */
+        lua_getfield(L, -1, "group");
+        group = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "value");
+        /* identify the type of attrib, according DXF group specification */
+        type = dxf_ident_attr_type(group);
+        switch(type) {
+          /* change the data */
+          case DXF_FLOAT :
+            val_d = lua_tonumber(L, -1);
+            dxf_xrecord_append (data, group, (void*)&val_d,
+              gui->drawing->pool);
+            break;
+          case DXF_INT :
+            val_i = lua_tonumber(L, -1);
+            dxf_xrecord_append (data, group, (void*)&val_i,
+              gui->drawing->pool);
+            break;
+          case DXF_STR :
+            dxf_xrecord_append (data, group, (void*)lua_tostring(L, -1),
+        gui->drawing->pool);
+        }
+        lua_pop(L, 1);
+      }
+      /* removes 'value'; keeps 'key' for next iteration */
+      lua_pop(L, 1);
+    }
+    
+    
+    lua_pushboolean(L, 1); /* return success */
+    return 1;
+  }
+  
 	lua_pushboolean(L, 0); /* return fail */
 	return 1;
 }

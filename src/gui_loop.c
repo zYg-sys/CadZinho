@@ -698,6 +698,7 @@ int gui_main_loop (gui_obj *gui) {
         gui->zoom = 800.0 / h;
         gui->ofs_x = x - (gui->win_w - 800 * ar)/(2.0 * gui->zoom);
         gui->ofs_y = y - h / 2.0;
+        gui->draw = 2;
       }
       else gui->action = VIEW_ZOOM_EXT;
       
@@ -1051,7 +1052,7 @@ int gui_main_loop (gui_obj *gui) {
   else if(gui->action == VIEW_ZOOM_EXT){
     gui->action = NONE;
     zoom_ext(gui->drawing, 0, 0, gui->win_w, gui->win_h, &gui->zoom, &gui->ofs_x, &gui->ofs_y);
-    gui->draw = 1;
+    gui->draw = 2;
   }
   else if(gui->action == VIEW_ZOOM_P){
     gui->action = NONE;
@@ -1229,7 +1230,7 @@ int gui_main_loop (gui_obj *gui) {
     else{
       snprintf(gui->log_msg, 63, "No actions to undo");
     }
-    gui->draw = 1;
+    gui->draw = 2;
   }
   
   else if(gui->action == REDO){
@@ -1242,7 +1243,7 @@ int gui_main_loop (gui_obj *gui) {
     else{
       snprintf(gui->log_msg, 63, "No actions to redo");
     }
-    gui->draw = 1;
+    gui->draw = 2;
   }
   
   else if(gui->action == LAYER_CHANGE){
