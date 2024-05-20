@@ -64,6 +64,11 @@ struct ogl { /* openGL context to pass main parameters */
 	GLfloat transf[4][4];
   GLint model_uni;
   GLfloat model[3][3];
+  
+  GLuint fbo;
+  GLuint fb_dims[2];
+  
+  int timer;
 
 };
 
@@ -105,6 +110,8 @@ int graph_list_draw_gl2(list_node *list, struct ogl *gl_ctx, struct draw_param p
 
 int dxf_list_draw_gl(list_node *list, struct ogl *gl_ctx,  struct draw_param param);
 
-int dxf_ents_draw_gl(dxf_drawing *drawing, struct ogl *gl_ctx, struct draw_param param);
+dxf_node * dxf_ents_draw_gl(dxf_drawing *drawing, struct ogl *gl_ctx, dxf_node *current, struct draw_param param);
+
+int dxf_draw_framebuffer(struct ogl *gl_ctx);
 
 #endif

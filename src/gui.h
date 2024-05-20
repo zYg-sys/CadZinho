@@ -533,6 +533,8 @@ struct Gui_obj {
   int grid_flags;
   double grid_spc;
   
+  SDL_Thread* timer_thread_id;
+  SDL_sem* timer_sem;
 };
 typedef struct Gui_obj gui_obj;
 

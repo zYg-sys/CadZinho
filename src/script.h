@@ -206,5 +206,12 @@ int script_do_get_data (lua_State *L);
 int script_do_sync (lua_State *L);
 int script_do_changes (lua_State *L);
 
+int script_get_head_var (lua_State *L);
+
+int script_get_dict (lua_State *L);
+int script_set_dict (lua_State *L);
+int script_set_dict_var (lua_State *L);
+int script_set_xrec (lua_State *L);
+
 
 #endif

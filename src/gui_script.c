@@ -1027,6 +1027,14 @@ int gui_script_prepare (gui_obj *gui, struct script_obj *script) {
 		{"last_blk", script_last_blk},
 		
     {"pdf_new", script_pdf_new},
+    
+    {"get_head_var", script_get_head_var},
+    
+    {"get_dict", script_get_dict},
+    {"set_dict", script_set_dict},
+    {"set_dict_var", script_set_dict_var},
+    {"set_xrec", script_set_xrec},
+    
 		{NULL, NULL}
 	};
 	luaL_newlib(T, cz_lib);

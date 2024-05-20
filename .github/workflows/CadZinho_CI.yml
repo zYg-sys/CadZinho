@@ -4,7 +4,7 @@ on: workflow_dispatch
 
 env:
   MAJOR: 0
-  MINOR: 5
+  MINOR: 6
   MAN: 0
   YEAR: 2024
   LUA_V: 5.4.6
@@ -371,6 +371,8 @@ jobs:
         cp ./SDL2-${{ env.SDL_V }}/include/* ./glew-${{ env.GLEW_V }}/include/SDL2/
         mv ./SDL2-${{ env.SDL_V }} ./SDL2
         cp ./SDL2_net-${{ env.SDL_NET_V }}/include/* ./src/
+        cp ./SDL2_net-${{ env.SDL_NET_V }}/include/* ./SDL2/include/
+        cp ./SDL2_net-${{ env.SDL_NET_V }}/include/* ./glew-${{ env.GLEW_V }}/include/SDL2/
         cp ./SDL2_net-${{ env.SDL_NET_V }}/lib/x64/* ./SDL2/
         mv ./SDL2_net-${{ env.SDL_NET_V }}/lib ./lib
         mv ./glew-${{ env.GLEW_V }} ./glew
@@ -469,7 +471,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4.1.1
       - uses: actions/download-artifact@v4.1.1
-      - uses: softprops/action-gh-release@v0.1.15
+      - uses: softprops/action-gh-release@v2.0.5
         with:
           tag_name: ${{ env.MAJOR }}.${{ env.MINOR }}.${{ env.MAN }}
           draft: true

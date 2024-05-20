@@ -2,6 +2,13 @@
  #include "gui.h"
 
 #define TOLERANCE 1e-6
+#ifdef __EMSCRIPTEN__ /* full HD */
+  #define MAX_RESOL_X 1920
+  #define MAX_RESOL_Y 1080
+#else /* 4K */
+  #define MAX_RESOL_X 3840
+  #define MAX_RESOL_Y 2160
+#endif
 
 /* mantain one unique element in a sorted array - array of integer values */
 static int unique (int n, int * a) {
@@ -173,10 +180,11 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
   #endif
 		glLinkProgram(shaderProgram);
 		glUseProgram(shaderProgram);
-			
+
 		/*texture */
-		GLuint textures[2];
-		glGenTextures(2, textures);
+		
+    GLuint textures[3];
+    glGenTextures(3, textures);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textures[0]);
@@ -199,7 +207,47 @@ int draw_gl_init (void *data, int clear){ /* init (or de-init) OpenGL */
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gui->gl_ctx.tex_w, gui->gl_ctx.tex_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		
+
+    /* -------- frame buffer  configuration --- */
+    /* define max resolution to textures */
+    glGetIntegerv(GL_MAX_VIEWPORT_DIMS, &gui->gl_ctx.fb_dims[0]);
+    gui->gl_ctx.fb_dims[0] = (gui->gl_ctx.fb_dims[0] < MAX_RESOL_X) ? gui->gl_ctx.fb_dims[0] : MAX_RESOL_X;
+    gui->gl_ctx.fb_dims[1] = (gui->gl_ctx.fb_dims[1] < MAX_RESOL_Y) ? gui->gl_ctx.fb_dims[1] : MAX_RESOL_Y;
+    
+    /* Create frame buffer */
+    GLuint fbo = 0;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    
+    /* Create main texture to render drawing */
+    glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, textures[2]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gui->gl_ctx.fb_dims[0], gui->gl_ctx.fb_dims[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    /* attach it to currently bound framebuffer object */
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textures[2], 0);
+    
+  #ifndef __EMSCRIPTEN__
+    /* The depth buffer */
+    GLuint depthrenderbuffer;
+    glGenRenderbuffers(1, &depthrenderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gui->gl_ctx.fb_dims[0], gui->gl_ctx.fb_dims[1]);
+    /* attach it to currently bound framebuffer object */
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+  #endif
+    
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+      printf("\nFail to generate frame buffer\n");
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    gui->gl_ctx.fbo = fbo;
+    
+  /* -------- end frame buffer config --- */
+    
 		gui->gl_ctx.tex = textures[1];
 		gui->gl_ctx.tex_uni = glGetUniformLocation(shaderProgram, "tex");
 		
@@ -1227,6 +1275,16 @@ int graph_draw_gl(graph_obj * master, struct ogl *gl_ctx, struct draw_param para
 	
 	/* verify if current graph is inside window*/
 	/*
+  x0 = xd0 * gl_ctx->transf[0][0] + yd0 * gl_ctx->transf[1][0] + zd0 * gl_ctx->transf[2][0] + gl_ctx->transf[3][0];
+  y0 = xd0 * gl_ctx->transf[0][1] + yd0 * gl_ctx->transf[1][1] + zd0 * gl_ctx->transf[2][1] + gl_ctx->transf[3][1];
+  z0 = xd0 * gl_ctx->transf[0][2] + yd0 * gl_ctx->transf[1][2] + zd0 * gl_ctx->transf[2][2] + gl_ctx->transf[3][2];
+  x1 = xd1 * gl_ctx->transf[0][0] + yd1 * gl_ctx->transf[1][0] + zd1 * gl_ctx->transf[2][0] + gl_ctx->transf[3][0];
+  y1 = xd1 * gl_ctx->transf[0][1] + yd1 * gl_ctx->transf[1][1] + zd1 * gl_ctx->transf[2][1] + gl_ctx->transf[3][1];
+  z1 = xd1 * gl_ctx->transf[0][2] + yd1 * gl_ctx->transf[1][2] + zd1 * gl_ctx->transf[2][2] + gl_ctx->transf[3][2];
+  
+  printf("corners = %.2f,%.2f,%.2f - %.2f,%.2f,%.2f\n", x0, y0, z0, x1, y1, z1);
+  */
+  /*
 	if ( (xd0 < 0 && xd1 < 0) || 
 		(xd0 > gl_ctx->win_w && xd1 > gl_ctx->win_w) || 
 		(yd0 < 0 && yd1 < 0) || 
@@ -1785,26 +1843,125 @@ int dxf_list_draw_gl(list_node *list, struct ogl *gl_ctx,  struct draw_param par
 	}
 }
 
-int dxf_ents_draw_gl(dxf_drawing *drawing, struct ogl *gl_ctx, struct draw_param param){
-	dxf_node *current = NULL;
+dxf_node * dxf_ents_draw_gl(dxf_drawing *drawing, struct ogl *gl_ctx, dxf_node *current, struct draw_param param){
+	//dxf_node *current = NULL;
 	//int lay_idx = 0;
+  if (!drawing) return NULL;
+	if (!drawing->ents) return NULL;
+  if (!drawing->main_struct) return NULL;
 		
-	if ((drawing->ents != NULL) && (drawing->main_struct != NULL)){
-		current = drawing->ents->obj.content->next;
+  if (!current) current = drawing->ents->obj.content->next;
 		
-		/* starts the content sweep  */
-		while (current != NULL){
-			if (current->type == DXF_ENT){ /* DXF entity */
-				/*verify if entity layer is on and thaw */
-				if ((!drawing->layers[current->obj.layer].off) && 
-					(!drawing->layers[current->obj.layer].frozen)){
-					
-					/* draw each entity */
-					graph_list_draw_gl2(current->obj.graphics, gl_ctx, param);
-					
-				}
-			}
-			current = current->next;
-		}
-	}
+  /* starts the content sweep  */
+  while (current != NULL && !gl_ctx->timer){
+    if (current->type == DXF_ENT){ /* DXF entity */
+      /*verify if entity layer is on and thaw */
+      if ((!drawing->layers[current->obj.layer].off) && 
+        (!drawing->layers[current->obj.layer].frozen)){
+        
+        /* draw each entity */
+        graph_list_draw_gl2(current->obj.graphics, gl_ctx, param);
+        
+      }
+    }
+    current = current->next;
+  }
+    
+  //if (gl_ctx->timer) { printf ("\nDraw too long\n");}
+  return current;
+	
+}
+
+int dxf_draw_framebuffer(struct ogl *gl_ctx){
+  
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  /* prepare for new opengl commands */
+  #ifndef GLES2
+  if (gl_ctx->elems == NULL){
+    gl_ctx->verts = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+    gl_ctx->elems = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+  }
+  #endif
+  
+  glUniform1i(gl_ctx->tex_uni, 2); /* choose frame buffer texture with drawing rendered */
+  
+
+  /* create a quad for texture and store vertices - 4 vertices */
+  /* 0 */
+	int j = gl_ctx->vert_count;
+	gl_ctx->verts[j].pos[0] = 0.0;
+	gl_ctx->verts[j].pos[1] = 0.0;
+	gl_ctx->verts[j].pos[2] = 0.0;
+  gl_ctx->verts[j].norm[0] = 0.0;
+  gl_ctx->verts[j].norm[1] = 0.0;
+  gl_ctx->verts[j].norm[2] = 1.0;
+	gl_ctx->verts[j].col[0] = 255;
+	gl_ctx->verts[j].col[1] = 255;
+	gl_ctx->verts[j].col[2] = 255;
+	gl_ctx->verts[j].col[3] = 255;
+	gl_ctx->verts[j].uv[0] = 0.0;
+	gl_ctx->verts[j].uv[1] = 0.0;
+	gl_ctx->vert_count ++;
+	/* 1 */
+	j = gl_ctx->vert_count;
+	gl_ctx->verts[j].pos[0] = 0.0;
+	gl_ctx->verts[j].pos[1] = (float) gl_ctx->fb_dims[1];
+	gl_ctx->verts[j].pos[2] = 0.0;
+  gl_ctx->verts[j].norm[0] = 0.0;
+  gl_ctx->verts[j].norm[1] = 0.0;
+  gl_ctx->verts[j].norm[2] = 1.0;
+	gl_ctx->verts[j].col[0] = 255;
+	gl_ctx->verts[j].col[1] = 255;
+	gl_ctx->verts[j].col[2] = 255;
+	gl_ctx->verts[j].col[3] = 255;
+	gl_ctx->verts[j].uv[0] = 0.0;
+	gl_ctx->verts[j].uv[1] = 1.0;
+	gl_ctx->vert_count ++;
+	/* 2 */
+	j = gl_ctx->vert_count;
+	gl_ctx->verts[j].pos[0] = (float) gl_ctx->fb_dims[0];
+	gl_ctx->verts[j].pos[1] = 0.0;
+	gl_ctx->verts[j].pos[2] = 0.0;
+  gl_ctx->verts[j].norm[0] = 0.0;
+  gl_ctx->verts[j].norm[1] = 0.0;
+  gl_ctx->verts[j].norm[2] = 1.0;
+	gl_ctx->verts[j].col[0] = 255;
+	gl_ctx->verts[j].col[1] = 255;
+	gl_ctx->verts[j].col[2] = 255;
+	gl_ctx->verts[j].col[3] = 255;
+	gl_ctx->verts[j].uv[0] = 1.0;
+	gl_ctx->verts[j].uv[1] = 0.0;
+	gl_ctx->vert_count ++;
+	/* 3 */
+	j = gl_ctx->vert_count;
+	gl_ctx->verts[j].pos[0] = (float) gl_ctx->fb_dims[0];
+	gl_ctx->verts[j].pos[1] = (float) gl_ctx->fb_dims[1];
+	gl_ctx->verts[j].pos[2] = 0.0;
+  gl_ctx->verts[j].norm[0] = 0.0;
+  gl_ctx->verts[j].norm[1] = 0.0;
+  gl_ctx->verts[j].norm[2] = 1.0;
+	gl_ctx->verts[j].col[0] = 255;
+	gl_ctx->verts[j].col[1] = 255;
+	gl_ctx->verts[j].col[2] = 255;
+	gl_ctx->verts[j].col[3] = 255;
+	gl_ctx->verts[j].uv[0] = 1.0;
+	gl_ctx->verts[j].uv[1] = 1.0;
+	gl_ctx->vert_count ++;
+	/* store vertex indexes in elements buffer - 2 triangles that share vertices  */
+	/* 0 */
+	j = gl_ctx->elem_count * 3;
+	gl_ctx->elems[j] = gl_ctx->vert_count - 4;
+	gl_ctx->elems[j+1] = gl_ctx->vert_count - 3;
+	gl_ctx->elems[j+2] = gl_ctx->vert_count - 2;
+	/* 1 */
+	gl_ctx->elems[j+3] = gl_ctx->vert_count - 3;
+	gl_ctx->elems[j+4] = gl_ctx->vert_count - 2;
+	gl_ctx->elems[j+5] = gl_ctx->vert_count - 1;
+	gl_ctx->elem_count+= 2;
+	
+  draw_gl (gl_ctx, 1); /* force draw and cleanup */
+  glUniform1i(gl_ctx->tex_uni, 0); /* choose blank texture */
+  
+  return 1;
 }

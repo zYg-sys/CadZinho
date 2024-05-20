@@ -3203,28 +3203,28 @@ dxf_node * dxf_new_xrecord (dxf_drawing *drawing, dxf_node *owner, char *name){
 	if (hdl_obj)
     handle = (char*) strpool_cstr2( &value_pool, hdl_obj->value.str);
   
-  /* create a new DICTIONARY object */
+  /* create a new XRECORD object */
 	const char *dxf_class = "AcDbXrecord";
 	int ok = 1;
-	dxf_node * new_dict = dxf_obj_new ("XRECORD", drawing->pool);
-  if (!new_dict) return NULL; /* error */
+	dxf_node * new_xrec = dxf_obj_new ("XRECORD", drawing->pool);
+  if (!new_xrec) return NULL; /* error */
 	
-	ok &= dxf_attr_append(new_dict, 5, (void *) zero, drawing->pool);
-	ok &= dxf_attr_append(new_dict, 330, (void *) handle, drawing->pool);
-	ok &= dxf_attr_append(new_dict, 100, (void *) dxf_class, drawing->pool);
-  ok &= dxf_attr_append(new_dict, 281, (void *) (int[]){1}, drawing->pool);
+	ok &= dxf_attr_append(new_xrec, 5, (void *) zero, drawing->pool);
+	ok &= dxf_attr_append(new_xrec, 330, (void *) handle, drawing->pool);
+	ok &= dxf_attr_append(new_xrec, 100, (void *) dxf_class, drawing->pool);
+  ok &= dxf_attr_append(new_xrec, 281, (void *) (int[]){1}, drawing->pool);
 	
 	if(!ok) return NULL;
-  if(!ent_handle(drawing, new_dict)) return NULL;
-	dxf_obj_append(drawing->objs, new_dict);
+  if(!ent_handle(drawing, new_xrec)) return NULL;
+	dxf_obj_append(drawing->objs, new_xrec);
   
-  hdl_obj = dxf_find_attr2(new_dict, 5);
+  hdl_obj = dxf_find_attr2(new_xrec, 5);
 	if (hdl_obj)
     handle = (char*) strpool_cstr2( &value_pool, hdl_obj->value.str);
   dxf_attr_append(owner, 3, (void *) name, drawing->pool);
   dxf_attr_append(owner, 350, (void *) handle, drawing->pool);
   
-  return new_dict;
+  return new_xrec;
 }
 
 int dxf_xrecord_append (dxf_node *owner, int group, void *value, int pool){
