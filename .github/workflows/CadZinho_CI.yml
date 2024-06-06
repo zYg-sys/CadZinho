@@ -5,7 +5,7 @@ on: workflow_dispatch
 env:
   MAJOR: 0
   MINOR: 6
-  MAN: 0
+  MAN: 1
   YEAR: 2024
   LUA_V: 5.4.6
   MESA_V: 23.1.1
@@ -145,29 +145,20 @@ jobs:
     - name: download AppImageTool
       uses: suisei-cn/actions-download-file@v1.6.0
       with:
-        url: "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+        url: "https://github.com/AppImage/AppImageKit/releases/download/latest/appimagetool-x86_64.AppImage"
         target: .
-    - name: download AppImage asset
+    - name: download linuxdeploy's AppImage
       uses: suisei-cn/actions-download-file@v1.6.0
       with:
-        url: "https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-x86_64"
+        url: "https://github.com/linuxdeploy/linuxdeploy/releases/download/latest/linuxdeploy-x86_64.AppImage"
         target: .
     - name: configure AppImageKit
       run: |
-        mkdir CadZinho.AppDir
-        mkdir CadZinho.AppDir/usr/
-        mkdir CadZinho.AppDir/usr/lib
-        mkdir CadZinho.AppDir/usr/bin
-        mkdir CadZinho.AppDir/usr/share
-        mkdir CadZinho.AppDir/usr/share/cadzinho
-        mv AppRun-x86_64 CadZinho.AppDir/AppRun
-        chmod u+x ./CadZinho.AppDir/AppRun
-        cp ./linux/cadzinho.desktop ./CadZinho.AppDir
-        cp ./linux/cadzinho.png ./CadZinho.AppDir
-        cp ./cadzinho ./CadZinho.AppDir/usr/bin
-        cp -r ./lang/ ./CadZinho.AppDir/usr/share/cadzinho/
-        cp $(ldd cadzinho | grep -o '\W/[^ ]*' | grep 'SDL2\|GLEW\|decor') ./CadZinho.AppDir/usr/lib
         chmod u+x ./appimagetool-x86_64.AppImage
+        chmod u+x linuxdeploy-x86_64.AppImage
+        ./linuxdeploy-x86_64.AppImage --appdir CadZinho.AppDir --executable ./cadzinho -d ./linux/cadzinho.desktop  -i ./linux/cadzinho.png
+        mkdir CadZinho.AppDir/usr/share/cadzinho
+        cp -r ./lang/ ./CadZinho.AppDir/usr/share/cadzinho/
         ./appimagetool-x86_64.AppImage CadZinho.AppDir
     - name: create archive
       run: |
