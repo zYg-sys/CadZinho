@@ -155,7 +155,7 @@ jobs:
     - name: configure AppImageKit
       run: |
         chmod u+x ./appimagetool-x86_64.AppImage
-        chmod u+x linuxdeploy-x86_64.AppImage
+        chmod u+x ./linuxdeploy-x86_64.AppImage
         ./linuxdeploy-x86_64.AppImage --appdir CadZinho.AppDir --executable ./cadzinho -d ./linux/cadzinho.desktop  -i ./linux/cadzinho.png
         mkdir CadZinho.AppDir/usr/share/cadzinho
         cp -r ./lang/ ./CadZinho.AppDir/usr/share/cadzinho/
