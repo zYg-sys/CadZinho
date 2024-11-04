@@ -7,10 +7,10 @@ env:
   MINOR: 6
   MAN: 1
   YEAR: 2024
-  LUA_V: 5.4.6
-  MESA_V: 23.1.1
+  LUA_V: 5.4.7
+  MESA_V: 24.2.6
   GLEW_V: 2.2.0
-  SDL_V: 2.30.0
+  SDL_V: 2.30.9
   SDL_NET_V: 2.2.0
   
 jobs:
